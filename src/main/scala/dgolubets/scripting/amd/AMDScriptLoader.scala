@@ -9,7 +9,6 @@ import dgolubets.scripting._
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 
 import scala.beans.BeanProperty
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 
 object AMDScriptLoader {
@@ -17,17 +16,19 @@ object AMDScriptLoader {
    * Creates an instance of AMD script loader on the engine.
    * @param engine Engine where a loader should be instantiated
    * @param baseDir Path to a base directory of all script modules
+   * @param ec Execution context
    */
-  def apply(engine: ScriptEngine, baseDir: File) = new AMDScriptLoader(engine, baseDir)
+  def apply(engine: ScriptEngine, baseDir: File, ec: ExecutionContext = ExecutionContext.Implicits.global) =
+    new AMDScriptLoader(engine, baseDir, ec)
 
   /**
    * Creates new script engine and an instance of AMD script loader.
    * @param baseDir Path to a base directory of all script modules
    */
-  def apply(baseDir: File) = {
+  def apply(baseDir: File): AMDScriptLoader = {
     val engineManager = new ScriptEngineManager(null)
     val engine = engineManager.getEngineByName("nashorn")
-    new AMDScriptLoader(engine, baseDir)
+    AMDScriptLoader(engine, baseDir)
   }
 }
 
@@ -38,7 +39,18 @@ object AMDScriptLoader {
  * @param engine Engine where a loader should be instantiated
  * @param baseDir Path to a base directory of all script modules
  */
-class AMDScriptLoader(engine: ScriptEngine, baseDir: File) extends ScriptModuleLoader with Logging {
+class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
+  extends ScriptModuleLoader with Logging {
+
+  /**
+   * Execution context for module loading operations.
+   */
+  protected[amd] implicit val executionContext = ec
+
+  /**
+   * Synchronization object for modules list
+   */
+  private object _modulesLock
 
   /**
    * List of the modules.
@@ -165,7 +177,7 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File) extends ScriptModuleL
    * @param id Absolute module id
    * @return
    */
-  private def ensureModule(id: String) = modules.synchronized {
+  private def ensureModule(id: String) = _modulesLock.synchronized {
     // synchronization is required cos it can be called in futures from different threads
     modules.getOrElse(id, {
       val module = Module(id, Promise())
@@ -184,7 +196,7 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File) extends ScriptModuleL
     log.debug(s"Resolving module: $moduleId")
 
     // if module doesn't yet exists
-    val module = modules.synchronized {
+    val module = _modulesLock.synchronized {
       modules.getOrElse(moduleId, {
         // create it
         val newModule = ensureModule(moduleId)

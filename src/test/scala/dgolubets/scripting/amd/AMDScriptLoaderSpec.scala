@@ -1,6 +1,7 @@
 package dgolubets.scripting.amd
 
 import java.io._
+import java.util.concurrent.Executors
 import javax.script._
 
 import dgolubets.scripting.ScriptModuleException
@@ -8,7 +9,7 @@ import jdk.nashorn.api.scripting.ScriptObjectMirror
 import org.scalatest._
 import org.scalatest.concurrent._
 
-import scala.concurrent.Promise
+import scala.concurrent.{ExecutionContext, Promise}
 import scala.reflect.ClassTag
 
 // https://github.com/amdjs/amdjs-api/blob/master/AMD.md
@@ -16,12 +17,13 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
 
   val engineManager = new ScriptEngineManager(null)
 
-  trait CleanTest {
+  trait Test {
+    lazy val executionContext = ExecutionContext.Implicits.global
     val engine = engineManager.getEngineByName("nashorn")
-    val loader = AMDScriptLoader(engine, new File("src/test/javascript/amd"))
+    val loader = AMDScriptLoader(engine, new File("src/test/javascript/amd"), executionContext)
   }
 
-  trait BaseTest extends CleanTest {
+  trait BaseTest extends Test {
     val globalsReader = new BufferedReader(new InputStreamReader(this.getClass.getResourceAsStream("/globals.js")))
     try {
       engine.eval(globalsReader)
@@ -35,7 +37,7 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
 
     "created" should {
 
-      "expose define, require and nothing more" in new CleanTest {
+      "expose define, require and nothing more" in new Test {
         var bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
         assert(bindings.containsKey("define"))
         assert(bindings.containsKey("require"))
@@ -43,13 +45,13 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
         assert(bindings.keySet.size() == 2)
       }
 
-      "set define.amd property" in new CleanTest {
+      "set define.amd property" in new Test {
         engine.eval("typeof define.amd === 'object'") shouldBe true
       }
     }
 
     "loads modules" should {
-      "expose engine scope to modules for read access" in new CleanTest {
+      "expose engine scope to modules for read access" in new Test {
         val module = loader.require("core/readEngineScope")
 
         engine.put("engineText", "some text")
@@ -57,11 +59,21 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
         }
       }
 
-      "not expose engine scope to modules for write access" in new CleanTest {
+      "not expose engine scope to modules for write access" in new Test {
         val module = loader.require("core/writeEngineScope")
 
         whenReady(module) { m =>
           engine.get("engineText") shouldBe null
+        }
+      }
+    }
+
+    "uses execution context" should {
+      "load modules bundle in custom execution context" in new BaseTest {
+        override lazy val executionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
+        val module = loader.require("bundles/ABC")
+
+        whenReady(module) { m =>
         }
       }
     }

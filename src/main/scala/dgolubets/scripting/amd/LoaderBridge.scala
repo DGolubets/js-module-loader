@@ -3,7 +3,6 @@ package dgolubets.scripting.amd
 import dgolubets.Logging
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration._
 
@@ -15,6 +14,7 @@ import scala.concurrent.duration._
  * @param context Loader context
  */
 private class LoaderBridge(loader: AMDScriptLoader, context: LoaderContext) extends Logging {
+  import loader.executionContext
 
   def require(moduleName: String): AnyRef = {
     log.trace(s"require('$moduleName')")
