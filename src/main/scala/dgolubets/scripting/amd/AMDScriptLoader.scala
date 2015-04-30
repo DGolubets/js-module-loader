@@ -82,15 +82,18 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File) extends ScriptModuleL
 
   /**
    * Resolves relative module id.
-   * @param relativeId Module id relative to resolving module
+   * @param moduleId Module id that can be relative to resolving module
    * @param context Resolution context
    * @return Absolute module id
    */
-  private def resolveModuleId(relativeId: String)(implicit context: ResolutionContext): String = {
-    // module ids are URIs
-    // so, to resolve it - just use URI methods
-    val currentURI = new URI(context.module.map(_.id).getOrElse(""))
-    currentURI.resolve(relativeId).toString
+  private def resolveModuleId(moduleId: String)(implicit context: ResolutionContext): String = {
+    if(moduleId.startsWith(".")){
+      // A module identifier is "relative" if the first term is "." or ".."
+
+      val currentURI = new URI(context.module.map(_.id).getOrElse(""))
+      currentURI.resolve(moduleId).toString
+    }
+    else moduleId
   }
 
   /**
@@ -178,7 +181,7 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File) extends ScriptModuleL
    */
   private def resolveModule(relativeId: String)( implicit resolutionContext: ResolutionContext): Future[AnyRef] = {
     val moduleId = resolveModuleId(relativeId)
-    log.debug(s"Resolving module relative id: $moduleId")
+    log.debug(s"Resolving module: $moduleId")
 
     // if module doesn't yet exists
     val module = modules.synchronized {
@@ -250,6 +253,8 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File) extends ScriptModuleL
     // ensure the module using id from the loader when omitted
     val module = ensureModule(moduleId.getOrElse(loaderContext.moduleId))
 
+    log.debug(s"Defined module: ${module.id}")
+
     // create module definition
     val definition = ModuleDefinition(
       loaderContext.file, // take URI from the loader context
@@ -299,7 +304,6 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File) extends ScriptModuleL
         }
       }
     )
-
     if(!module.definition.trySuccess(definition)){
       log.warn(s"Module '$moduleId' has already been defined.")
     }

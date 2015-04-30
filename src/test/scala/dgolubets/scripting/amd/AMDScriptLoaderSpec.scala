@@ -42,6 +42,10 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
 
         assert(bindings.keySet.size() == 2)
       }
+
+      "set define.amd property" in new CleanTest {
+        engine.eval("typeof define.amd === 'object'") shouldBe true
+      }
     }
 
     "loads modules" should {
@@ -85,8 +89,8 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
         }
       }
 
-      def loadModule[T: Manifest](format: String, file: String, check: T => Boolean = { _: T => true}) = {
-        s"load a module in $format" in  new BaseTest {
+      def load[T: Manifest](message: String, file: String, check: T => Boolean = { _: T => true}) = {
+        s"load $message" in  new BaseTest {
           val module = loader.require(file)
 
           whenReady(module) { m =>
@@ -96,54 +100,35 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
         }
       }
 
-      loadModule[ScriptObjectMirror]("simple object format", "definitions/object")
+      load[ScriptObjectMirror]("a module in simple object format", "definitions/object")
 
-      loadModule[ScriptObjectMirror]("simple function format", "definitions/function")
+      load[ScriptObjectMirror]("a module in simple function format", "definitions/function")
 
-      loadModule[ScriptObjectMirror]("function format with dependencies", "definitions/functionWithDependencies")
+      load[ScriptObjectMirror]("a module in function format with dependencies", "definitions/functionWithDependencies")
 
-      loadModule[ScriptObjectMirror]("function format with dependencies that returns a function", "definitions/returnsFunction",
+      load[ScriptObjectMirror]("a module in function format with dependencies that returns a function", "definitions/returnsFunction",
         m => m.isFunction)
 
-      loadModule[ScriptObjectMirror]("function format with dependencies that returns an array", "definitions/returnsArray",
+      load[ScriptObjectMirror]("a module in function format with dependencies that returns an array", "definitions/returnsArray",
         m => m.isArray)
 
-      loadModule[String]("function format with dependencies that returns a string", "definitions/returnsString")
+      load[String]("a module in function format with dependencies that returns a string", "definitions/returnsString")
 
-      loadModule[Integer]("function format with dependencies that returns a number", "definitions/returnsNumber")
+      load[Integer]("a module in function format with dependencies that returns a number", "definitions/returnsNumber")
 
 
-      "load simple circular dependant modules" in new BaseTest {
-        val module = loader.require("dependencies/circular/simple/A")
 
-        whenReady(module) { m =>
-          println(m)
-        }
-      }
+      load("simple circular dependant modules", "dependencies/circular/simple/A")
 
-      "load circular dependant modules defined with 'exports'" in new BaseTest {
-        val module = loader.require("dependencies/circular/exports/A")
+      load("circular dependant modules defined with 'exports'", "dependencies/circular/exports/A")
 
-        whenReady(module) { m =>
-          println(m)
-        }
-      }
+      load("load modules with common dependency", "dependencies/common/simple/A")
 
-      "load modules with common dependency defined with 'exports'" in new BaseTest {
-        val module = loader.require("dependencies/common/exports/A")
+      load("modules with common dependency defined with 'exports'", "dependencies/common/exports/A")
 
-        whenReady(module) { m =>
-          println(m)
-        }
-      }
 
-      "load modules with common dependency" in new BaseTest {
-        val module = loader.require("dependencies/common/simple/A")
+      load("load modules bundle", "bundles/ABC")
 
-        whenReady(module) { m =>
-          println(m)
-        }
-      }
     }
   }
 }

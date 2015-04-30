@@ -47,4 +47,7 @@
         }
     };
 
+    // required in AMD spec
+    global.define.amd = {};
+
 })(this);
