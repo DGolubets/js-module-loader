@@ -10,6 +10,7 @@ import jdk.nashorn.api.scripting.ScriptObjectMirror
 
 import scala.beans.BeanProperty
 import scala.concurrent._
+import scala.concurrent.duration._
 
 object AMDScriptLoader {
   /**
@@ -244,11 +245,23 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
 
   /**
    * Loads a module by id.
-   * @param moduleId Module absolute id.
+   * @param moduleId Module absolute id
    * @return
    */
   override def require(moduleId: String): Future[ScriptModule] = {
     resolveModule(moduleId)(defaultResolutionContext).map(value => new ScriptModule(value))
+  }
+
+  /**
+   * Synchronously loads a module by id and relative to current module.
+   * @param moduleId Module id
+   * @param loaderContext Loader context
+   * @return
+   */
+  private[amd] def requireLocal(moduleId: String)(implicit loaderContext: LoaderContext): ScriptModule = {
+    val resolutionContext = ResolutionContext(modules.get(loaderContext.moduleId).toList)
+    val module = resolveModule(moduleId)(resolutionContext).map(value => new ScriptModule(value))
+    Await.result(module, 30.seconds)
   }
 
   /**
@@ -287,8 +300,12 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
 
           Otherwise just use undefined.
           */
+
+          // if dependencies are omited - use default dependency list (as in AMD spec)
+          val dependenciesOrDefault = if(dependencies.nonEmpty) dependencies else Seq("require", "exports", "module")
+
           val instanceRef =
-            if(dependencies.contains("exports"))
+            if(dependenciesOrDefault.contains("exports"))
               engine.eval("new Object()") // {}
             else
               null
@@ -296,7 +313,7 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
           val instanceReady = Promise[AnyRef]()
           val instance = ModuleInstance(instanceRef, instanceReady.future)
 
-          val result = Future.sequence(dependencies.map(d => resolveDependency(d))).map { deps =>
+          val result = Future.sequence(dependenciesOrDefault.map(d => resolveDependency(d))).map { deps =>
             moduleFactory.call(null, deps: _*) match {
               case _: jdk.nashorn.internal.runtime.Undefined =>
                 // when factory returned undefined - then it's likely it uses 'exports'

@@ -116,6 +116,8 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
 
       load[ScriptObjectMirror]("a module in simple function format", "definitions/function")
 
+      load[ScriptObjectMirror]("a module in simple function format with default arguments", "definitions/functionWithDefaultArgs")
+
       load[ScriptObjectMirror]("a module in function format with dependencies", "definitions/functionWithDependencies")
 
       load[ScriptObjectMirror]("a module in function format with dependencies that returns a function", "definitions/returnsFunction",
@@ -137,6 +139,8 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
       load("load modules with common dependency", "dependencies/common/simple/A")
 
       load("modules with common dependency defined with 'exports'", "dependencies/common/exports/A")
+
+      load("load module using local require", "dependencies/local/A")
 
 
       load("load modules bundle", "bundles/ABC")

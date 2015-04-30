@@ -3,9 +3,6 @@ package dgolubets.scripting.amd
 import dgolubets.Logging
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 
-import scala.concurrent._
-import scala.concurrent.duration._
-
 /**
  * JS to JVM proxy.
  * It wraps a loader with a specified context.
@@ -18,8 +15,7 @@ private class LoaderBridge(loader: AMDScriptLoader, context: LoaderContext) exte
 
   def require(moduleName: String): AnyRef = {
     log.trace(s"require('$moduleName')")
-    val module = loader.require(moduleName)
-    Await.result(module, 30.seconds).value
+    loader.requireLocal(moduleName)(context).value
   }
 
   def require(moduleNames: Array[String], callback: ScriptObjectMirror): Unit = {
