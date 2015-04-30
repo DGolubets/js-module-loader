@@ -10,7 +10,6 @@ import org.scalatest._
 import org.scalatest.concurrent._
 
 import scala.concurrent.{ExecutionContext, Promise}
-import scala.reflect.ClassTag
 
 // https://github.com/amdjs/amdjs-api/blob/master/AMD.md
 class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {

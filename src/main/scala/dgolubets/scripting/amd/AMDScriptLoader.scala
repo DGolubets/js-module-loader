@@ -231,15 +231,19 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
     // at least one module should be here
     val module = resolutionContext.module.get
 
+
+
     // there are few special names according to the AMD spec
     dependency match {
-      case "exports" => module.instance.map(_.value) // uninitialized module object
-      case "module" => module.definition.future.map(definition => new {
-        @BeanProperty val id = module.id
-        @BeanProperty val uri = definition.uri
-      })
-      case "require" => Future.successful(engine.eval("require", loaderContext.scriptContext))
-      case _ => resolveModule(dependency)
+      case "exports" =>
+        module.instance.map(_.value) // uninitialized module object
+      case "module" =>
+        case class ModuleInfo(@BeanProperty id: String, @BeanProperty uri: String)
+        module.definition.future.map(definition => new ModuleInfo(module.id, definition.uri.toString))
+      case "require" =>
+        Future.successful(engine.eval("require", loaderContext.scriptContext))
+      case _ =>
+        resolveModule(dependency)
     }
   }
 
