@@ -27,7 +27,7 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
     try {
       engine.eval(globalsReader)
     }
-    finally{
+    finally {
       globalsReader.close()
     }
   }
@@ -135,14 +135,14 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
 
       load("circular dependant modules defined with 'exports'", "dependencies/circular/exports/A")
 
-      load("load modules with common dependency", "dependencies/common/simple/A")
+      load("modules with common dependency", "dependencies/common/simple/A")
 
       load("modules with common dependency defined with 'exports'", "dependencies/common/exports/A")
 
-      load("load module using local require", "dependencies/local/A")
+      load("module using local require", "dependencies/local/A")
 
 
-      load("load modules bundle", "bundles/ABC")
+      load("modules bundle", "bundles/ABC")
 
     }
   }
