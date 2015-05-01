@@ -25,3 +25,19 @@ and in Javascript
 ```
 engine.eval("require(['app'], function(app){ console.log(app); })")
 ```
+
+# Known Issues
+
+Play < 2.4 doesn't have Nashorn classes in it's boot loader. 
+To workaround it, add the following code to your play SBT config
+```
+Play.playCommonClassloader := {
+  val oldCl = Play.playCommonClassloader.value
+  def isNashornClass(className: String) = className.startsWith("jdk.nashorn.")
+  def notNashornResource(resource: String) = resource != "META-INF/services/javax.script.ScriptEngineFactory"
+  new classpath.DualLoader(
+    oldCl, !isNashornClass(_), notNashornResource,
+    ClassLoader.getSystemClassLoader, isNashornClass, notNashornResource
+  )
+}
+```
