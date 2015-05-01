@@ -1,12 +1,9 @@
 /**
- * Require and define functions that simply call loader.
+ * Initializes specified context with require and define methods, which in turn invoke the loader.
+ * It's easier to deal with method overloading here.
  */
-
-(function(global){
-    // loader is exposed under the same name initially, to prevent conflicts.
-    var loader = require;
-
-    global.require = function(modules, callback){
+(function(context, loader){
+    context.require = function(modules, callback){
         if(typeof modules === "string"){
             return loader.require(modules);
         }
@@ -15,7 +12,7 @@
         }
     };
 
-    global.define = function(arg1, arg2, arg3){
+    context.define = function(arg1, arg2, arg3){
         var moduleId;
         var deps = [];
         var factory;
@@ -42,12 +39,11 @@
         if(moduleId){
             return loader.define(moduleId, deps, factory);
         }
-        else{
+        else {
             return loader.define(deps, factory);
         }
     };
 
     // required in AMD spec
-    global.define.amd = {};
-
-})(this);
+    context.define.amd = {};
+});

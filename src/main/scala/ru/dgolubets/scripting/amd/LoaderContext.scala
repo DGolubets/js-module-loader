@@ -1,7 +1,6 @@
 package ru.dgolubets.scripting.amd
 
 import java.net.URI
-import javax.script.ScriptContext
 
 /**
  * Describes loader state during evaluation of a module in a separate file.
@@ -10,4 +9,4 @@ import javax.script.ScriptContext
  * @param file File being evaluated
  * @param scriptContext Current script context
  */
-private case class LoaderContext(moduleId: String, file: URI, scriptContext: ScriptContext)
+private case class LoaderContext(moduleId: String, file: URI, scriptContext: LoaderScriptContext)

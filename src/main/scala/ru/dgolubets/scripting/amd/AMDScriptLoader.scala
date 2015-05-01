@@ -72,9 +72,9 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
   /**
    * Default loader context that is used for modules defined without their own file (i.e. via engine.eval).
    */
-  private val defaultLoaderContext = LoaderContext("", new URI(""), engine.getContext)
+  private val defaultLoaderContext = LoaderContext("", new URI(""), new LoaderScriptContext(engine))
 
-  // set define and require on the engine
+  // set define and require on the context
   expose(defaultLoaderContext)
 
   /**
@@ -114,18 +114,23 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
    * @param loaderContext Loader context
    */
   private def expose(loaderContext: LoaderContext): Unit = {
-    val scriptContext = loaderContext.scriptContext
-    val localBindings = scriptContext.getBindings(ScriptContext.ENGINE_SCOPE)
 
-    // to prevent js namespace pollution, expose loader as 'require'
-    // then the bridge.js script will take the value and replace it with a function
-    localBindings.put("require", new LoaderBridge(this, loaderContext))
+    val moduleBindings = loaderContext.scriptContext.getBindings(LoaderScriptContext.Scopes.Module.id)
 
-    val bridgeJsReader = new BufferedReader(new InputStreamReader(this.getClass.getResourceAsStream("/bridge.js")))
+    val bridgeJsReader = new BufferedReader(new InputStreamReader(this.getClass.getResourceAsStream("/init.js")))
     try {
-      engine.eval(bridgeJsReader, scriptContext)
+      val init = engine.eval(bridgeJsReader).asInstanceOf[ScriptObjectMirror]
+
+      /*
+      It's very important to execute this with the default engine bindings.
+      Otherwise all objects created in the script will be linked to different instance of nashorn.global,
+      what leads to some sneaky errors.
+
+      Module bindings are passed into init function as a context parameter.
+      */
+      init.call(null, moduleBindings, new LoaderBridge(this, loaderContext))
     }
-    finally{
+    finally {
       bridgeJsReader.close()
     }
   }
@@ -140,15 +145,12 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
 
     if(moduleFile.isDefined){
       /*
-        Modules should be able to see global variables defined on the engine.
+        Modules should be able to see global and engine variables.
         On the other hand a separate loader context is required for each module file, that should be in a private module scope.
-
-        To achieve it without manual bindings processing I use new ScriptContext where I put engine bindings in GLOBAL_SCOPE
-        and new bindings in ENGINE_SCOPE.
+        For that reason there is a special ScriptContext subclass with an additional scope.
        */
-      val moduleScriptContext = new SimpleScriptContext()
-      moduleScriptContext.setBindings(engine.createBindings(), ScriptContext.ENGINE_SCOPE)
-      moduleScriptContext.setBindings(engine.getBindings(ScriptContext.ENGINE_SCOPE), ScriptContext.GLOBAL_SCOPE)
+
+      val moduleScriptContext = new LoaderScriptContext(engine)
 
       // construct new loader context with the script context and expose it to module
       expose(LoaderContext(module.id, moduleFile.get.toURI, moduleScriptContext))
@@ -165,11 +167,12 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
         }
       }
       catch {
-        case err: Exception => module.definition.tryFailure(ScriptModuleException(cause = err))
+        case err: Exception =>
+          module.definition.tryFailure(ScriptModuleException(cause = err))
       }
     }
     else {
-      module.definition.tryFailure(ScriptModuleException(s"Couldn't find module file."))
+      module.definition.tryFailure(ScriptModuleException(s"Couldn't find module: ${module.id}"))
     }
   }
 
@@ -255,6 +258,12 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
   override def require(moduleId: String): Future[ScriptModule] = {
     resolveModule(moduleId)(defaultResolutionContext).map(value => new ScriptModule(value))
   }
+
+  /**
+   * ScriptContext with require and define variables.
+   * @return
+   */
+  override def context: ScriptContext = defaultLoaderContext.scriptContext
 
   /**
    * Synchronously loads a module by id and relative to current module.

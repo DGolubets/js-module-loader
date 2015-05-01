@@ -1,5 +1,7 @@
 package ru.dgolubets.scripting
 
+import javax.script.ScriptContext
+
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -7,6 +9,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * Common script module loader interface.
  */
 trait ScriptModuleLoader {
+
+  /**
+   * ScriptContext with require and define variables.
+   * @return
+   */
+  def context: ScriptContext
+
   /**
    * Loads a module.
    * @param moduleId Module absolute id

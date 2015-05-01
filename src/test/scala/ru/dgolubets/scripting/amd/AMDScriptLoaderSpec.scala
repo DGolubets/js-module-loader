@@ -36,16 +36,23 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
 
     "created" should {
 
-      "expose define, require and nothing more" in new Test {
-        var bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
-        assert(bindings.containsKey("define"))
-        assert(bindings.containsKey("require"))
-
-        assert(bindings.keySet.size() == 2)
+      "expose define and require" in new Test {
+        engine.eval("define", loader.context) shouldBe a [ScriptObjectMirror]
+        engine.eval("require", loader.context) shouldBe a [ScriptObjectMirror]
       }
 
       "set define.amd property" in new Test {
-        engine.eval("typeof define.amd === 'object'") shouldBe true
+        engine.eval("typeof define.amd === 'object'", loader.context) shouldBe true
+      }
+
+      "leave engine scope clean" in new Test {
+        var bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
+        assert(bindings.keySet.size() == 0)
+      }
+
+      "leave global scope clean" in new Test {
+        var bindings = engine.getBindings(ScriptContext.GLOBAL_SCOPE)
+        assert(bindings.keySet.size() == 0)
       }
     }
 
@@ -55,14 +62,6 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
 
         engine.put("engineText", "some text")
         whenReady(module) { m =>
-        }
-      }
-
-      "not expose engine scope to modules for write access" in new Test {
-        val module = loader.require("core/writeEngineScope")
-
-        whenReady(module) { m =>
-          engine.get("engineText") shouldBe null
         }
       }
     }
@@ -81,7 +80,7 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
       "load module" in new BaseTest {
         val promise = Promise[AnyRef]()
         engine.put("promise", promise)
-        engine.eval("require(['definitions/object'], function(m){ promise.success(m); })")
+        engine.eval("require(['definitions/object'], function(m){ promise.success(m); })", loader.context)
 
         whenReady(promise.future) { m =>
           m shouldNot be (null)

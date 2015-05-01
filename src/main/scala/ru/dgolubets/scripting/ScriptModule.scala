@@ -6,4 +6,4 @@ package ru.dgolubets.scripting
  *              It can be casted either to ScriptObjectMirror or java boxed primitives
  *              depending on the module result
  */
-class ScriptModule(val value: AnyRef)
+case class ScriptModule(value: AnyRef)
