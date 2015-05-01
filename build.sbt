@@ -1,6 +1,8 @@
 name := "js-module-loader"
 
-version := "0.0.1"
+organization := "ru.dgolubets"
+
+version := "0.1-SNAPSHOT"
 
 scalaVersion := "2.11.6"
     
@@ -11,3 +13,4 @@ libraryDependencies ++= Seq(
   "org.clapper" %% "grizzled-slf4j" % "1.0.2",
   "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
   )
+

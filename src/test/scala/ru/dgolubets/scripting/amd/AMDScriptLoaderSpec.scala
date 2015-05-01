@@ -1,10 +1,10 @@
-package dgolubets.scripting.amd
+package ru.dgolubets.scripting.amd
 
 import java.io._
 import java.util.concurrent.Executors
 import javax.script._
 
-import dgolubets.scripting.ScriptModuleException
+import ru.dgolubets.scripting.ScriptModuleException
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 import org.scalatest._
 import org.scalatest.concurrent._

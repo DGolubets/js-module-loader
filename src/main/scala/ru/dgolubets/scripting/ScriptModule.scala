@@ -1,4 +1,4 @@
-package dgolubets.scripting
+package ru.dgolubets.scripting
 
 /**
  * Script module wrapper.

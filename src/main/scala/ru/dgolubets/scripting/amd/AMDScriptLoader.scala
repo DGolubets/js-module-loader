@@ -1,11 +1,11 @@
-package dgolubets.scripting.amd
+package ru.dgolubets.scripting.amd
 
 import java.io.{BufferedReader, File, FileReader, InputStreamReader}
 import java.net.URI
 import javax.script.{ScriptEngineManager, SimpleScriptContext, ScriptContext, ScriptEngine}
 
-import dgolubets.Logging
-import dgolubets.scripting._
+import ru.dgolubets.Logging
+import ru.dgolubets.scripting._
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 
 import scala.beans.BeanProperty

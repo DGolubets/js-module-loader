@@ -1,4 +1,4 @@
-package dgolubets.scripting
+package ru.dgolubets.scripting
 
 /**
  * Base exception type for script loaders.

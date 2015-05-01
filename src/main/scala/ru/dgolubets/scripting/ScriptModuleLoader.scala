@@ -1,4 +1,4 @@
-package dgolubets.scripting
+package ru.dgolubets.scripting
 
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global

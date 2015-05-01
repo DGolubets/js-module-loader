@@ -1,6 +1,6 @@
-package dgolubets.scripting.amd
+package ru.dgolubets.scripting.amd
 
-import dgolubets.Logging
+import ru.dgolubets.Logging
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 
 /**

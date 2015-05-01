@@ -1,4 +1,4 @@
-package dgolubets.scripting.amd
+package ru.dgolubets.scripting.amd
 
 import java.net.URI
 
