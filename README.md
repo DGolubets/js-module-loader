@@ -20,10 +20,16 @@ then it can be used in Scala
 loader.require("app").map { module => 
   // module.value will be a ScriptObjectMirror or boxed Java primitive, depending on the module return value
 }
+
+loader.require(Seq("React", "CommentBox")).map {
+  case Seq(ScriptModule(react: ScriptObjectMirror), ScriptModule(commentBox: ScriptObjectMirror)) =>
+    val commentBoxHtml = react.callMember("renderToString", react.callMember("createElement", commentBox)).toString
+}
 ```
 and in Javascript
 ```
-engine.eval("require(['app'], function(app){ console.log(app); })")
+// javascript should be evaluated with loader.context
+engine.eval("require(['app'], function(app){ console.log(app); })", loader.context)
 ```
 
 # Known Issues
