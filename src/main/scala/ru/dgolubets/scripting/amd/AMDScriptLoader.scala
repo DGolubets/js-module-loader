@@ -72,7 +72,7 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
   /**
    * Default loader context that is used for modules defined without their own file (i.e. via engine.eval).
    */
-  private val defaultLoaderContext = LoaderContext("", new URI(""), new LoaderScriptContext(engine))
+  private val defaultLoaderContext = LoaderContext("", new URI(""), new LoaderScriptContext(engine), Future.successful(()))
 
   // set define and require on the context
   expose(defaultLoaderContext)
@@ -136,10 +136,11 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
   }
 
   /**
-   * Loads the module
+   * Loads the module in the specified execution context
    * @param module Module to load
    */
-  private def loadModuleFile(module: Module) = {
+  private def startLoadModuleFile(module: Module) = Future {
+    log.debug(s"Loading module: ${module.id}")
     val moduleFile = getModuleFile(module.id)
     log.debug(s"Loading module file: $moduleFile")
 
@@ -151,24 +152,32 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
        */
 
       val moduleScriptContext = new LoaderScriptContext(engine)
+      val finished = Promise[Unit]()
+      val context = LoaderContext(module.id, moduleFile.get.toURI, moduleScriptContext, finished.future)
 
-      // construct new loader context with the script context and expose it to module
-      expose(LoaderContext(module.id, moduleFile.get.toURI, moduleScriptContext))
-
-      // next - read and evaluate module file in the script context
-      // on error - finish module definition promise with failure
       try {
-        val moduleReader = new FileReader(moduleFile.get)
+        // construct new loader context with the script context and expose it to module
+        expose(context)
+
+        // next - read and evaluate module file in the script context
+        // on error - finish module definition promise with failure
         try {
-          engine.eval(moduleReader, moduleScriptContext)
+          val moduleReader = new FileReader(moduleFile.get)
+          try {
+            engine.eval(moduleReader, moduleScriptContext)
+          }
+          finally {
+            moduleReader.close()
+          }
         }
-        finally{
-          moduleReader.close()
+        catch {
+          case err: Exception =>
+            module.definition.tryFailure(ScriptModuleException(cause = err))
         }
       }
-      catch {
-        case err: Exception =>
-          module.definition.tryFailure(ScriptModuleException(cause = err))
+      finally {
+        // a signal for a module definitions that file has been processed
+        finished.success(())
       }
     }
     else {
@@ -205,7 +214,7 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
         // create it
         val newModule = ensureModule(moduleId)
         // start the loading process
-        loadModuleFile(newModule)
+        startLoadModuleFile(newModule)
         newModule
       })
     }
@@ -233,8 +242,6 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
   private def resolveDependency(dependency: String)(implicit resolutionContext: ResolutionContext, loaderContext: LoaderContext): Future[AnyRef] = {
     // at least one module should be here
     val module = resolutionContext.module.get
-
-
 
     // there are few special names according to the AMD spec
     dependency match {
@@ -346,8 +353,13 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
         }
       }
     )
-    if(!module.definition.trySuccess(definition)){
-      log.warn(s"Module '$moduleId' has already been defined.")
+
+    // publish module definition only after the whole module file is processed
+    // that's crucial when multiple modules are defined in one file (e.g. bundles)
+    loaderContext.fileLoaded.map { _ =>
+      if(!module.definition.trySuccess(definition)){
+        log.warn(s"Module '$moduleId' has already been defined.")
+      }
     }
   }
 }
