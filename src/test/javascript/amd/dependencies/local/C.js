@@ -1,0 +1,1 @@
+define({ text: "Module C" });

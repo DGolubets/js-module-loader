@@ -1,36 +1,14 @@
 package ru.dgolubets.scripting.amd
 
-import java.io._
-import java.util.concurrent.Executors
 import javax.script._
 
 import ru.dgolubets.scripting.ScriptModuleException
 import jdk.nashorn.api.scripting.ScriptObjectMirror
-import org.scalatest._
-import org.scalatest.concurrent._
 
-import scala.concurrent.{ExecutionContext, Promise}
+import scala.concurrent.Promise
 
 // https://github.com/amdjs/amdjs-api/blob/master/AMD.md
-class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
-
-  val engineManager = new ScriptEngineManager(null)
-
-  trait Test {
-    lazy val executionContext = ExecutionContext.Implicits.global
-    val engine = engineManager.getEngineByName("nashorn")
-    val loader = AMDScriptLoader(engine, new File("src/test/javascript/amd"), executionContext)
-  }
-
-  trait BaseTest extends Test {
-    val globalsReader = new BufferedReader(new InputStreamReader(this.getClass.getResourceAsStream("/globals.js")))
-    try {
-      engine.eval(globalsReader)
-    }
-    finally {
-      globalsReader.close()
-    }
-  }
+class AMDScriptLoaderSpec extends AMDScriptLoaderSpecBase {
 
   "AMDScriptLoader" when {
 
@@ -66,17 +44,7 @@ class AMDScriptLoaderSpec extends WordSpec with Matchers with ScalaFutures {
       }
     }
 
-    "uses execution context" should {
-      "load modules bundle in custom execution context" in new BaseTest {
-        override lazy val executionContext = ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
-        val module = loader.require("bundles/ABC")
-
-        whenReady(module) { m =>
-        }
-      }
-    }
-
-    "require in called in javascript" should {
+    "require is called in javascript" should {
       "load module" in new BaseTest {
         val promise = Promise[AnyRef]()
         engine.put("promise", promise)

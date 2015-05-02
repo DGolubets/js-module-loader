@@ -5,4 +5,4 @@ package ru.dgolubets.scripting
  * @param msg Message text
  * @param cause Inner exception
  */
-case class ScriptModuleException(msg: String = null, cause: Throwable = null) extends Exception(msg, cause)
+case class ScriptModuleException(msg: String, cause: Throwable = null) extends Exception(msg, cause)

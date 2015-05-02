@@ -2,25 +2,25 @@ package ru.dgolubets.scripting.amd
 
 import java.io.{BufferedReader, File, FileReader, InputStreamReader}
 import java.net.URI
-import javax.script.{ScriptEngineManager, SimpleScriptContext, ScriptContext, ScriptEngine}
+import java.util.concurrent.Executors
+import javax.script.{ScriptContext, ScriptEngine, ScriptEngineManager}
 
+import jdk.nashorn.api.scripting.ScriptObjectMirror
 import ru.dgolubets.Logging
 import ru.dgolubets.scripting._
-import jdk.nashorn.api.scripting.ScriptObjectMirror
 
 import scala.beans.BeanProperty
 import scala.concurrent._
-import scala.concurrent.duration._
+import scala.util.Success
 
 object AMDScriptLoader {
   /**
    * Creates an instance of AMD script loader on the engine.
    * @param engine Engine where a loader should be instantiated
    * @param baseDir Path to a base directory of all script modules
-   * @param ec Execution context
    */
-  def apply(engine: ScriptEngine, baseDir: File, ec: ExecutionContext = ExecutionContext.Implicits.global) =
-    new AMDScriptLoader(engine, baseDir, ec)
+  def apply(engine: ScriptEngine, baseDir: File) =
+    new AMDScriptLoader(engine, baseDir)
 
   /**
    * Creates new script engine and an instance of AMD script loader.
@@ -40,13 +40,17 @@ object AMDScriptLoader {
  * @param engine Engine where a loader should be instantiated
  * @param baseDir Path to a base directory of all script modules
  */
-class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
+class AMDScriptLoader(engine: ScriptEngine, baseDir: File)
   extends ScriptModuleLoader with Logging {
 
   /**
-   * Execution context for module loading operations.
+   * Execution context for module loading.
+   *
+   * ScriptEngine is NOT thread safe!
+   * Therefore all asynchronous operations that work with ScriptEngine should be executed sequentially.
+   * That's why SingleThreadExecutor is used here.
    */
-  protected[amd] implicit val executionContext = ec
+  private[amd] implicit val executionContext = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor())
 
   /**
    * Synchronization object for modules list
@@ -73,6 +77,14 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
    * Default loader context that is used for modules defined without their own file (i.e. via engine.eval).
    */
   private val defaultLoaderContext = LoaderContext("", new URI(""), new LoaderScriptContext(engine), Future.successful(()))
+
+  /**
+   * Undefined value in JavaScript
+   */
+  private lazy val Undefined = {
+    val global = engine.eval("this").asInstanceOf[ScriptObjectMirror]
+    global.getMember("undefined")
+  }
 
   // set define and require on the context
   expose(defaultLoaderContext)
@@ -172,7 +184,8 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
         }
         catch {
           case err: Exception =>
-            module.definition.tryFailure(ScriptModuleException(cause = err))
+            log.error("Error evaluating module file: ${moduleFile.get}", err)
+            module.definition.tryFailure(ScriptModuleException(s"Error evaluating module file: ${moduleFile.get}", cause = err))
         }
       }
       finally {
@@ -263,7 +276,7 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
    * @return
    */
   override def require(moduleId: String): Future[ScriptModule] = {
-    resolveModule(moduleId)(defaultResolutionContext).map(value => new ScriptModule(value))
+    resolveModule(moduleId)(defaultResolutionContext).map(value => ScriptModule(value))
   }
 
   /**
@@ -278,10 +291,18 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
    * @param loaderContext Loader context
    * @return
    */
-  private[amd] def requireLocal(moduleId: String)(implicit loaderContext: LoaderContext): ScriptModule = {
-    val resolutionContext = ResolutionContext(modules.get(loaderContext.moduleId).toList)
-    val module = resolveModule(moduleId)(resolutionContext).map(value => new ScriptModule(value))
-    Await.result(module, 30.seconds)
+  private[amd] def requireLocal(moduleId: String)(implicit loaderContext: LoaderContext): AnyRef = {
+    implicit val resolutionContext = ResolutionContext(modules.get(loaderContext.moduleId).toList)
+    val absoluteModuleId = resolveModuleId(moduleId)
+
+    // return initialized module value or none
+    modules.get(absoluteModuleId).flatMap(module =>
+      module.instance.value match {
+      case Some(Success(instance)) =>
+        Some(instance.value)
+      case _ =>
+        None
+    }).getOrElse(Undefined)
   }
 
   /**
@@ -328,14 +349,14 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File, ec: ExecutionContext)
             if(dependenciesOrDefault.contains("exports"))
               engine.eval("new Object()") // {}
             else
-              null
+              Undefined
 
           val instanceReady = Promise[AnyRef]()
           val instance = ModuleInstance(instanceRef, instanceReady.future)
 
           val result = Future.sequence(dependenciesOrDefault.map(d => resolveDependency(d))).map { deps =>
             moduleFactory.call(null, deps: _*) match {
-              case _: jdk.nashorn.internal.runtime.Undefined =>
+              case Undefined =>
                 // when factory returned undefined - then it's likely it uses 'exports'
                 instance.value
               case other =>

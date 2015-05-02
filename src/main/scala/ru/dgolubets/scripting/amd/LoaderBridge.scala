@@ -15,7 +15,7 @@ private class LoaderBridge(loader: AMDScriptLoader, context: LoaderContext) exte
 
   def require(moduleName: String): AnyRef = {
     log.trace(s"require('$moduleName')")
-    loader.requireLocal(moduleName)(context).value
+    loader.requireLocal(moduleName)(context)
   }
 
   def require(moduleNames: Array[String], callback: ScriptObjectMirror): Unit = {
