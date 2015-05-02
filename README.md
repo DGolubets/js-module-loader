@@ -13,14 +13,13 @@ Loader is created as follows
 ```
 val engineManager = new ScriptEngineManager(null)
 val engine = engineManager.getEngineByName("nashorn")
-val loader = AMDScriptLoader(engine, new File("src/javascript/amd"))
+val loader = AMDScriptLoader(engine, FileModuleReader("src/javascript/amd"))
 ```
 then it can be used in Scala
 ```
 loader.require("app").map { module => 
   // module.value will be a ScriptObjectMirror or boxed Java primitive, depending on the module return value
 }
-
 loader.require(Seq("React", "CommentBox")).map {
   case Seq(ScriptModule(react: ScriptObjectMirror), ScriptModule(commentBox: ScriptObjectMirror)) =>
     val commentBoxHtml = react.callMember("renderToString", react.callMember("createElement", commentBox)).toString

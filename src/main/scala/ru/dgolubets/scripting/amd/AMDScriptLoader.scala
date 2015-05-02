@@ -17,20 +17,10 @@ object AMDScriptLoader {
   /**
    * Creates an instance of AMD script loader on the engine.
    * @param engine Engine where a loader should be instantiated
-   * @param baseDir Path to a base directory of all script modules
+   * @param moduleReader Script reader
    */
-  def apply(engine: ScriptEngine, baseDir: File) =
-    new AMDScriptLoader(engine, baseDir)
-
-  /**
-   * Creates new script engine and an instance of AMD script loader.
-   * @param baseDir Path to a base directory of all script modules
-   */
-  def apply(baseDir: File): AMDScriptLoader = {
-    val engineManager = new ScriptEngineManager(null)
-    val engine = engineManager.getEngineByName("nashorn")
-    AMDScriptLoader(engine, baseDir)
-  }
+  def apply(engine: ScriptEngine, moduleReader: ScriptModuleReader) =
+    new AMDScriptLoader(engine, moduleReader)
 }
 
 /**
@@ -38,9 +28,9 @@ object AMDScriptLoader {
  * https://github.com/amdjs/amdjs-api/blob/master/AMD.md
  *
  * @param engine Engine where a loader should be instantiated
- * @param baseDir Path to a base directory of all script modules
+ * @param moduleReader Script reader
  */
-class AMDScriptLoader(engine: ScriptEngine, baseDir: File)
+class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
   extends ScriptModuleLoader with Logging {
 
   /**
@@ -90,22 +80,6 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File)
   expose(defaultLoaderContext)
 
   /**
-   * Gets a file for specified module id.
-   *
-   * @param moduleId Absolute module id
-   * @return Some(File) or None if file doesn't exist
-   */
-  private def getModuleFile(moduleId: String): Option[File] = {
-    // try both files without and with .js extension
-    val fileList = List(
-      new File(baseDir, moduleId),
-      new File(baseDir, moduleId + ".js"))
-
-    // return only real existent files, not directories
-    fileList.find(_.isFile).map(_.getCanonicalFile)
-  }
-
-  /**
    * Resolves relative module id.
    * @param moduleId Module id that can be relative to resolving module
    * @param context Resolution context
@@ -151,12 +125,11 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File)
    * Loads the module in the specified execution context
    * @param module Module to load
    */
-  private def startLoadModuleFile(module: Module) = Future {
+  private def startLoadModuleFile(module: Module): Unit = Future {
     log.debug(s"Loading module: ${module.id}")
-    val moduleFile = getModuleFile(module.id)
-    log.debug(s"Loading module file: $moduleFile")
 
-    if(moduleFile.isDefined){
+    val moduleUri = new URI(module.id)
+    moduleReader.read(moduleUri) map { moduleScript =>
       /*
         Modules should be able to see global and engine variables.
         On the other hand a separate loader context is required for each module file, that should be in a private module scope.
@@ -165,36 +138,31 @@ class AMDScriptLoader(engine: ScriptEngine, baseDir: File)
 
       val moduleScriptContext = new LoaderScriptContext(engine)
       val finished = Promise[Unit]()
-      val context = LoaderContext(module.id, moduleFile.get.toURI, moduleScriptContext, finished.future)
+      val context = LoaderContext(module.id, moduleUri, moduleScriptContext, finished.future)
 
       try {
         // construct new loader context with the script context and expose it to module
         expose(context)
 
-        // next - read and evaluate module file in the script context
+        // next - evaluate module script in the script context
         // on error - finish module definition promise with failure
         try {
-          val moduleReader = new FileReader(moduleFile.get)
-          try {
-            engine.eval(moduleReader, moduleScriptContext)
-          }
-          finally {
-            moduleReader.close()
-          }
+          engine.eval(moduleScript, moduleScriptContext)
         }
         catch {
           case err: Exception =>
-            log.error("Error evaluating module file: ${moduleFile.get}", err)
-            module.definition.tryFailure(ScriptModuleException(s"Error evaluating module file: ${moduleFile.get}", cause = err))
+            log.error(s"Error evaluating module: ${module.id}", err)
+            module.definition.tryFailure(ScriptModuleException(s"Error evaluating module: ${module.id}", cause = err))
         }
       }
       finally {
         // a signal for a module definitions that file has been processed
         finished.success(())
       }
-    }
-    else {
-      module.definition.tryFailure(ScriptModuleException(s"Couldn't find module: ${module.id}"))
+
+    } recover {
+      case err =>
+        module.definition.tryFailure(ScriptModuleException(s"Couldn't load module: ${module.id}", err))
     }
   }
 

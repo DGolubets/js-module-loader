@@ -5,6 +5,7 @@ import javax.script.ScriptEngineManager
 
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
+import ru.dgolubets.scripting.impl.FileModuleReader
 
 trait AMDScriptLoaderSpecBase extends WordSpec with Matchers with ScalaFutures  {
 
@@ -12,7 +13,7 @@ trait AMDScriptLoaderSpecBase extends WordSpec with Matchers with ScalaFutures  
 
   trait Test {
     val engine = engineManager.getEngineByName("nashorn")
-    val loader = AMDScriptLoader(engine, new File("src/test/javascript/amd"))
+    val loader = AMDScriptLoader(engine, FileModuleReader("src/test/javascript/amd"))
   }
 
   trait BaseTest extends Test {
