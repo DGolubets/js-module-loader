@@ -36,7 +36,7 @@ class AMDScriptLoaderSpec extends AMDScriptLoaderSpecBase {
 
     "loads modules" should {
       "expose engine scope to modules for read access" in new Test {
-        val module = loader.require("core/readEngineScope")
+        val module = loader.requireAsync("core/readEngineScope")
 
         engine.put("engineText", "some text")
         whenReady(module) { m =>
@@ -60,7 +60,7 @@ class AMDScriptLoaderSpec extends AMDScriptLoaderSpecBase {
     "require is called in scala" should {
 
       "return error for invalid file" in new BaseTest {
-        val module = loader.require("aModuleThatDoesNotExist")
+        val module = loader.requireAsync("aModuleThatDoesNotExist")
 
         whenReady(module.failed) { m =>
           m shouldBe a [ScriptModuleException]
@@ -69,7 +69,7 @@ class AMDScriptLoaderSpec extends AMDScriptLoaderSpecBase {
 
       def load[T: Manifest](message: String, file: String, check: T => Boolean = { _: T => true}) = {
         s"load $message" in  new BaseTest {
-          val module = loader.require(file)
+          val module = loader.requireAsync(file)
 
           whenReady(module) { m =>
             m.value shouldBe a [T]

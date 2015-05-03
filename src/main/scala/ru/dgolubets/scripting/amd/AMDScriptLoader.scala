@@ -32,7 +32,7 @@ object AMDScriptLoader {
  * @param moduleReader Script reader
  */
 class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
-  extends ScriptModuleLoader with Logging {
+  extends ScriptModuleAsyncLoader with Logging {
 
   /**
    * Execution context for module loading.
@@ -239,7 +239,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
    * @param moduleId Module absolute id
    * @return
    */
-  override def require(moduleId: String): Future[ScriptModule] = {
+  override def requireAsync(moduleId: String): Future[ScriptModule] = {
     resolveModule(moduleId)(defaultResolutionContext).map(value => ScriptModule(value))
   }
 

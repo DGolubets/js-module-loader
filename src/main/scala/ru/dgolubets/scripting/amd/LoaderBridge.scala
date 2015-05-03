@@ -20,7 +20,7 @@ private class LoaderBridge(loader: AMDScriptLoader, context: LoaderContext) exte
 
   def require(moduleNames: Array[String], callback: ScriptObjectMirror): Unit = {
     log.trace(s"require([${moduleNames.map(d => s"'$d'").mkString(",")}], $callback)")
-    loader.require(moduleNames).map(modules => callback.call(null, modules.map(_.value): _*))
+    loader.requireAsync(moduleNames).map(modules => callback.call(null, modules.map(_.value): _*))
   }
 
   def define(dependencies: Array[String], callback: ScriptObjectMirror): Unit  = {

@@ -17,10 +17,10 @@ val loader = AMDScriptLoader(engine, FileModuleReader("src/javascript/amd"))
 ```
 then it can be used in Scala
 ```
-loader.require("app").map { module => 
+loader.requireAsync("app").map { module => 
   // module.value will be a ScriptObjectMirror or boxed Java primitive, depending on the module return value
 }
-loader.require(Seq("React", "CommentBox")).map {
+loader.requireAsync(Seq("React", "CommentBox")).map {
   case Seq(ScriptModule(react: ScriptObjectMirror), ScriptModule(commentBox: ScriptObjectMirror)) =>
     val commentBoxHtml = react.callMember("renderToString", react.callMember("createElement", commentBox)).toString
 }
