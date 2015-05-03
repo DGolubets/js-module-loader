@@ -5,7 +5,8 @@ import javax.script.ScriptEngineManager
 
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
-import ru.dgolubets.scripting.impl.FileModuleReader
+import ru.dgolubets.scripting.readers.FileModuleReader
+import ru.dgolubets.util.Resource
 
 trait AMDScriptLoaderSpecBase extends WordSpec with Matchers with ScalaFutures  {
 
@@ -17,12 +18,6 @@ trait AMDScriptLoaderSpecBase extends WordSpec with Matchers with ScalaFutures  
   }
 
   trait BaseTest extends Test {
-    val globalsReader = new BufferedReader(new InputStreamReader(this.getClass.getResourceAsStream("/globals.js")))
-    try {
-      engine.eval(globalsReader)
-    }
-    finally {
-      globalsReader.close()
-    }
+    engine.eval(Resource.readString("/globals.js").get)
   }
 }

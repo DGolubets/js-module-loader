@@ -1,13 +1,14 @@
 package ru.dgolubets.scripting.amd
 
-import java.io.{BufferedReader, File, FileReader, InputStreamReader}
+import java.io.{BufferedReader, InputStreamReader}
 import java.net.URI
 import java.util.concurrent.Executors
-import javax.script.{ScriptContext, ScriptEngine, ScriptEngineManager}
+import javax.script.{ScriptContext, ScriptEngine}
 
 import jdk.nashorn.api.scripting.ScriptObjectMirror
-import ru.dgolubets.Logging
 import ru.dgolubets.scripting._
+import ru.dgolubets.scripting.readers.ScriptModuleReader
+import ru.dgolubets.util.{Resource, Logging}
 
 import scala.beans.BeanProperty
 import scala.concurrent._
@@ -103,22 +104,17 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
 
     val moduleBindings = loaderContext.scriptContext.getBindings(LoaderScriptContext.Scopes.Module.id)
 
-    val bridgeJsReader = new BufferedReader(new InputStreamReader(this.getClass.getResourceAsStream("/init.js")))
-    try {
-      val init = engine.eval(bridgeJsReader).asInstanceOf[ScriptObjectMirror]
+    val initScript = Resource.readString("/init.js").get
+    val init = engine.eval(initScript).asInstanceOf[ScriptObjectMirror]
 
-      /*
-      It's very important to execute this with the default engine bindings.
-      Otherwise all objects created in the script will be linked to different instance of nashorn.global,
-      what leads to some sneaky errors.
+    /*
+    It's very important to execute this with the default engine bindings.
+    Otherwise all objects created in the script will be linked to different instance of nashorn.global,
+    what leads to some sneaky errors.
 
-      Module bindings are passed into init function as a context parameter.
-      */
-      init.call(null, moduleBindings, new LoaderBridge(this, loaderContext))
-    }
-    finally {
-      bridgeJsReader.close()
-    }
+    Module bindings are passed into init function as a context parameter.
+    */
+    init.call(null, moduleBindings, new LoaderBridge(this, loaderContext))
   }
 
   /**

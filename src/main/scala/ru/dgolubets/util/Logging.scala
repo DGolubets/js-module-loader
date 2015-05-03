@@ -1,11 +1,11 @@
-package ru.dgolubets
+package ru.dgolubets.util
 
 import grizzled.slf4j.Logger
 
 /**
  * Logging mixin.
  */
-trait Logging {
+private[dgolubets] trait Logging {
 
   protected lazy val log = Logger(this.getClass)
 
