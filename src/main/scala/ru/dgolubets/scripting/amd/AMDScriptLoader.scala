@@ -1,6 +1,5 @@
 package ru.dgolubets.scripting.amd
 
-import java.io.{BufferedReader, InputStreamReader}
 import java.net.URI
 import java.util.concurrent.Executors
 import javax.script.{ScriptContext, ScriptEngine}

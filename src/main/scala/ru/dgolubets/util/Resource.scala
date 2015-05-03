@@ -3,8 +3,7 @@ package ru.dgolubets.util
 import java.io.{InputStreamReader, BufferedReader}
 import java.nio.CharBuffer
 
-import scala.util.Try
-import scala.collection.JavaConversions._
+import scala.util.{Failure, Try}
 
 /**
  * Resource util.
@@ -15,8 +14,12 @@ private[dgolubets] object Resource {
    * @param resourceName Name of the resource
    * @return
    */
-  def readString(resourceName: String): Try[String] = Try {
-      val reader = new BufferedReader(new InputStreamReader(this.getClass.getResourceAsStream(resourceName)))
+  def readString(resourceName: String, resourceClass: Class[_] = this.getClass): Try[String] = Try {
+      val resource = resourceClass.getResourceAsStream(resourceName)
+      if(resource == null)
+        throw new Exception(s"Resource was not found: $resourceName")
+
+      val reader = new BufferedReader(new InputStreamReader(resource))
       try {
         val stringBuilder = new StringBuilder()
         val buffer = CharBuffer.allocate(1024)
