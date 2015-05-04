@@ -9,7 +9,7 @@ import scala.concurrent._
  */
 private case class Module(id: String, definition: Promise[ModuleDefinition]) {
   private object _lock
-  private val _instancePromise = Promise[ModuleInstance]()
+  private var _instance: Option[Future[ModuleInstance]] = None
 
   /**
    * Gets module instance.
@@ -18,15 +18,14 @@ private case class Module(id: String, definition: Promise[ModuleDefinition]) {
    * @return Future module instance
    */
   def instance(implicit context: ResolutionContext, ec: ExecutionContext): Future[ModuleInstance] = {
-    if (!_instancePromise.isCompleted) {
-      // nevertheless of Promise use
+    if (_instance.isEmpty) {
       // we need lock here to prevent more than one factory call
       _lock.synchronized {
-        if (!_instancePromise.isCompleted) {
-          _instancePromise.completeWith(definition.future.map(_.factory(context)))
+        if (_instance.isEmpty) {
+          _instance = Some(definition.future.map(_.factory(context)))
         }
       }
     }
-    _instancePromise.future
+    _instance.get
   }
 }
