@@ -117,14 +117,14 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
   }
 
   /**
-   * Loads the module in the specified execution context
-   * @param module Module to load
+   * Loads the module script file.
+   * @param module Module
    */
-  private def startLoadModuleFile(module: Module): Unit = Future {
+  private def loadModuleAsync(module: Module): Future[Unit] = {
     log.debug(s"Loading module: ${module.id}")
 
     val moduleUri = new URI(module.id)
-    moduleReader.read(moduleUri) map { moduleScript =>
+    moduleReader.readAsync(moduleUri) map { moduleScript =>
       /*
         Modules should be able to see global and engine variables.
         On the other hand a separate loader context is required for each module file, that should be in a private module scope.
@@ -154,7 +154,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
         // a signal for a module definitions that file has been processed
         finished.success(())
       }
-
+      ()
     } recover {
       case err =>
         module.definition.tryFailure(ScriptModuleException(s"Couldn't load module: ${module.id}", err))
@@ -190,7 +190,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
         // create it
         val newModule = ensureModule(moduleId)
         // start the loading process
-        startLoadModuleFile(newModule)
+        loadModuleAsync(newModule)
         newModule
       })
     }
