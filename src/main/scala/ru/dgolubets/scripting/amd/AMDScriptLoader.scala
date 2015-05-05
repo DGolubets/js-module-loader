@@ -66,7 +66,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
   /**
    * Default loader context that is used for modules defined without their own file (i.e. via engine.eval).
    */
-  private val defaultLoaderContext = LoaderContext("", new URI(""), new LoaderScriptContext(engine), Future.successful(()))
+  private val defaultLoaderContext = LoaderContext("", new URI(""), new LoaderScriptContext(engine))
 
   /**
    * Undefined value in JavaScript
@@ -124,7 +124,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
     log.debug(s"Loading module: ${module.id}")
 
     val moduleUri = new URI(module.id)
-    moduleReader.readAsync(moduleUri) map { moduleScript =>
+    val loadOperation = moduleReader.readAsync(moduleUri) map { moduleScript =>
       /*
         Modules should be able to see global and engine variables.
         On the other hand a separate loader context is required for each module file, that should be in a private module scope.
@@ -132,33 +132,44 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
        */
 
       val moduleScriptContext = new LoaderScriptContext(engine)
-      val finished = Promise[Unit]()
-      val context = LoaderContext(module.id, moduleUri, moduleScriptContext, finished.future)
+      val context = LoaderContext(module.id, moduleUri, moduleScriptContext)
 
+      // construct new loader context with the script context and expose it to module
+      expose(context)
+
+      // next - evaluate module script in the script context
+      // on error - finish module definition promise with failure
       try {
-        // construct new loader context with the script context and expose it to module
-        expose(context)
+        engine.eval(moduleScript, moduleScriptContext)
+      }
+      catch {
+        case err: Exception =>
+          log.error(s"Error evaluating module: ${module.id}", err)
+          throw ScriptModuleException(s"Error evaluating module: ${module.id}", cause = err)
+      }
 
-        // next - evaluate module script in the script context
-        // on error - finish module definition promise with failure
-        try {
-          engine.eval(moduleScript, moduleScriptContext)
-        }
-        catch {
-          case err: Exception =>
-            log.error(s"Error evaluating module: ${module.id}", err)
-            module.definition.tryFailure(ScriptModuleException(s"Error evaluating module: ${module.id}", cause = err))
+      // publish collected module definitions
+      for(definition <- context.definitions){
+        val definedModule = ensureModule(definition.id)
+        if(!definedModule.definition.trySuccess(definition)){
+          log.warn(s"Module '${definedModule.id}' has already been defined.")
         }
       }
-      finally {
-        // a signal for a module definitions that file has been processed
-        finished.success(())
+
+      // check if the primary module has been defined
+      // it should have been to the moment
+      if(!module.definition.isCompleted){
+        throw ScriptModuleException(s"Module definition has not been found: ${module.id}")
       }
-      ()
-    } recover {
-      case err =>
-        module.definition.tryFailure(ScriptModuleException(s"Couldn't load module: ${module.id}", err))
     }
+
+    // if load has failed - mark the primary module definition failed too
+    loadOperation onFailure {
+      case err =>
+        module.definition.tryFailure(ScriptModuleException(s"Could not load module: ${module.id}", err))
+    }
+
+    loadOperation
   }
 
   /**
@@ -286,6 +297,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
 
     // create module definition
     val definition = ModuleDefinition(
+      module.id,
       loaderContext.file, // take URI from the loader context
       { context =>
 
@@ -338,12 +350,8 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
       }
     )
 
-    // publish module definition only after the whole module file is processed
-    // that's crucial when multiple modules are defined in one file (e.g. bundles)
-    loaderContext.fileLoaded.map { _ =>
-      if(!module.definition.trySuccess(definition)){
-        log.warn(s"Module '$moduleId' has already been defined.")
-      }
-    }
+    // do not publish module definition yet
+    // only add definition to the context
+    loaderContext.definitions += definition
   }
 }
