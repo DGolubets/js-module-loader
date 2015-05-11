@@ -44,11 +44,16 @@ class UrlModuleReader(baseUrl: String) extends ScriptModuleReader {
   override def read(uri: URI): Try[String] = Try {
     val stringBuilder = new StringBuilder
     val reader = new BufferedReader(new URLReader(getAbsoluteURI(uri).toURL))
-    val buffer = CharBuffer.allocate(1024)
-    while(reader.read(buffer) > 0){
-      buffer.flip()
-      stringBuilder.appendAll(buffer.array(), 0, buffer.remaining())
-      buffer.clear()
+    try {
+      val buffer = CharBuffer.allocate(1024)
+      while (reader.read(buffer) > 0) {
+        buffer.flip()
+        stringBuilder.appendAll(buffer.array(), 0, buffer.remaining())
+        buffer.clear()
+      }
+    }
+    finally {
+      reader.close()
     }
     stringBuilder.result()
   }

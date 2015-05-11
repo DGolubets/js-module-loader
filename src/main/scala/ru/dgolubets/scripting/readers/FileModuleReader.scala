@@ -42,13 +42,18 @@ class FileModuleReader(baseDir: File, charset: Charset) extends ScriptModuleRead
   override def read(uri: URI): Try[String] = Try {
     val stringBuilder = new StringBuilder
     val fin = new FileInputStream(getModuleFile(uri))
-    val fc = fin.getChannel
-    val buffer = ByteBuffer.allocate(1024)
-    while(fc.read(buffer) > 0){
-      buffer.flip()
-      val charBuffer = charset.decode(buffer)
-      stringBuilder.appendAll(charBuffer.array(), 0, charBuffer.remaining())
-      buffer.clear()
+    try {
+      val fc = fin.getChannel
+      val buffer = ByteBuffer.allocate(1024)
+      while (fc.read(buffer) > 0) {
+        buffer.flip()
+        val charBuffer = charset.decode(buffer)
+        stringBuilder.appendAll(charBuffer.array(), 0, charBuffer.remaining())
+        buffer.clear()
+      }
+    }
+    finally {
+      fin.close()
     }
     stringBuilder.result()
   }
