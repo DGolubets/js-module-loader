@@ -6,6 +6,7 @@ import javax.script.{ScriptContext, ScriptEngine}
 
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 import ru.dgolubets.scripting._
+import ru.dgolubets.scripting.internal.LoaderScriptContext
 import ru.dgolubets.scripting.readers.ScriptModuleReader
 import ru.dgolubets.util.{Resource, Logging}
 

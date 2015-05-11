@@ -2,8 +2,9 @@ package ru.dgolubets.scripting.amd
 
 import java.net.URI
 
+import ru.dgolubets.scripting.internal.LoaderScriptContext
+
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
 
 /**
  * Describes loader state during evaluation of a module in a separate file.

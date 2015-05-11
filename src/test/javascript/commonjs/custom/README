@@ -1,0 +1,2 @@
+These are custom tests specific to the loader implementation.
+Tests which contain program.js are picked up automatically. Others are used in code.

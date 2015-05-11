@@ -26,7 +26,7 @@ class FileModuleReader(baseDir: File, charset: Charset) extends ScriptModuleRead
 
   private val baseUri = baseDir.toURI
 
-  private def getModuleFile(uri: URI): File = {
+  protected def getModuleFile(uri: URI): File = {
     var fileUri = baseUri.resolve(uri).toString
     if(!fileUri.endsWith(".js")){
       fileUri += ".js"

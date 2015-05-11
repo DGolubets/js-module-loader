@@ -1,11 +1,12 @@
-package ru.dgolubets.scripting.amd
+package ru.dgolubets.scripting.internal
 
 import java.io._
 import java.util
-import javax.script.{ScriptEngine, Bindings, ScriptContext}
+import javax.script.{Bindings, ScriptContext, ScriptEngine}
+
 import scala.collection.JavaConversions._
 
-private object LoaderScriptContext {
+private[scripting] object LoaderScriptContext {
 
   /**
    * Possible scope values.
@@ -29,7 +30,7 @@ private object LoaderScriptContext {
  * @param engineScope Engine scope bindings
  * @param moduleScope Module scope bindings
  */
-private class LoaderScriptContext(private var globalScope: Bindings,
+private[scripting] class LoaderScriptContext(private var globalScope: Bindings,
                                   private var engineScope: Bindings,
                                   private var moduleScope: Bindings) extends ScriptContext {
   import LoaderScriptContext._

@@ -1,0 +1,1 @@
+var var1 = 'I should be local.';

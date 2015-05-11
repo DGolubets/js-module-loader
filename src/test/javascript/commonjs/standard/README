@@ -1,0 +1,5 @@
+These are slightly refactored module tests from the CommonJS repository:
+https://github.com/commonjs/commonjs/tree/master/tests/modules/1.0
+
+Module 'test' has been added to shim config to eliminate duplicating.
+Prints has been removed.
