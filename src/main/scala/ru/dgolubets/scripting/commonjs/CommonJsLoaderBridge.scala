@@ -1,6 +1,6 @@
 package ru.dgolubets.scripting.commonjs
 
-import ru.dgolubets.util.Logging
+import ru.dgolubets.internal.util.Logging
 
 /**
  * JS to JVM proxy.

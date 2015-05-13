@@ -8,7 +8,7 @@ import jdk.nashorn.api.scripting.{NashornScriptEngineFactory, JSObject, NashornS
 import ru.dgolubets.scripting._
 import ru.dgolubets.scripting.internal.ScriptEngineExtensions._
 import ru.dgolubets.scripting.readers.ScriptModuleReader
-import ru.dgolubets.util.{Logging, Resource}
+import ru.dgolubets.internal.util.{Logging, Resource}
 
 import scala.beans.BeanProperty
 import scala.concurrent._
@@ -99,7 +99,7 @@ class AMDScriptLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptMod
    * @param context Loader context
    */
   private def bind(bindings: Bindings, context: LoaderContext): Unit = {
-    val initScript = Resource.readString("/amd.js").get
+    val initScript = Resource.readString("/amd/bind.js").get
     val initFunction = engine.eval(initScript).asInstanceOf[JSObject]
 
     initFunction.call(null, bindings, new LoaderBridge(this, context))

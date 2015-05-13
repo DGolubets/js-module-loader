@@ -2,7 +2,7 @@ package ru.dgolubets.scripting.readers
 
 import java.net.URI
 
-import ru.dgolubets.util.Resource
+import ru.dgolubets.internal.util.Resource
 
 import scala.util.Try
 

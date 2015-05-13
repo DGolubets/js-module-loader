@@ -8,7 +8,7 @@ import ru.dgolubets.scripting.commonjs.exceptions._
 import ru.dgolubets.scripting.internal.ScriptEngineExtensions._
 import ru.dgolubets.scripting.readers.ScriptModuleReader
 import ru.dgolubets.scripting.{ScriptModule, ScriptModuleException, ScriptModuleSyncLoader}
-import ru.dgolubets.util.{Logging, Resource}
+import ru.dgolubets.internal.util.{Logging, Resource}
 
 import scala.util._
 
@@ -91,7 +91,7 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
    * @param context Loader context
    */
   private def bind(bindings: Bindings, context: CommonJsLoaderContext): Unit = {
-    val initScript = Resource.readString("/commonjs.js").get
+    val initScript = Resource.readString("/commonjs/bind.js").get
     val initFunction = engine.eval(initScript).asInstanceOf[JSObject]
 
     initFunction.call(null, bindings, new CommonJsLoaderBridge(this, context))

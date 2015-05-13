@@ -1,4 +1,4 @@
-package ru.dgolubets.util
+package ru.dgolubets.internal.util
 
 import grizzled.slf4j.Logger
 

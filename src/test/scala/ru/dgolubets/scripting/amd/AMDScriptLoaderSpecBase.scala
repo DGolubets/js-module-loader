@@ -5,7 +5,7 @@ import javax.script.ScriptEngineManager
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
 import ru.dgolubets.scripting.readers.FileModuleReader
-import ru.dgolubets.util.Resource
+import ru.dgolubets.internal.util.Resource
 
 trait AMDScriptLoaderSpecBase extends WordSpec with Matchers with ScalaFutures  {
 

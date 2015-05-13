@@ -1,4 +1,4 @@
-package ru.dgolubets.util
+package ru.dgolubets.internal.util
 
 import java.io.{InputStreamReader, BufferedReader}
 import java.nio.CharBuffer

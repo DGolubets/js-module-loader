@@ -1,13 +1,6 @@
-package ru.dgolubets.scripting.util
+package ru.dgolubets.internal.util
 
-import java.io.File
-import java.net.URI
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
-import ru.dgolubets.util.Resource
 
 
 class ResourceSpec extends WordSpec with Matchers{

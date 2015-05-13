@@ -1,9 +1,9 @@
 /**
- * Initializes specified context with require and define methods, which in turn invoke the loader.
+ * Initializes specified scope with require method.
  * It's easier to deal with method overloading here.
  */
-(function(context, loader){
-    context.require = function(modules, callback){
+(function(scope, loader){
+    scope.require = function(modules, callback){
         if(typeof modules === "string"){
             return loader.require(modules);
         }
@@ -12,7 +12,7 @@
         }
     };
 
-    context.define = function(arg1, arg2, arg3){
+    scope.define = function(arg1, arg2, arg3){
         var moduleId;
         var deps = [];
         var factory;
@@ -45,5 +45,5 @@
     };
 
     // required in AMD spec
-    context.define.amd = {};
+    scope.define.amd = {};
 });

@@ -1,7 +1,7 @@
 package ru.dgolubets.scripting.amd
 
 import jdk.nashorn.api.scripting.JSObject
-import ru.dgolubets.util.Logging
+import ru.dgolubets.internal.util.Logging
 
 /**
  * JS to JVM proxy.
