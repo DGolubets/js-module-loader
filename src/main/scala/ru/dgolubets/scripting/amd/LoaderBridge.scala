@@ -1,6 +1,6 @@
 package ru.dgolubets.scripting.amd
 
-import jdk.nashorn.api.scripting.ScriptObjectMirror
+import jdk.nashorn.api.scripting.JSObject
 import ru.dgolubets.util.Logging
 
 /**
@@ -10,7 +10,7 @@ import ru.dgolubets.util.Logging
  * @param loader Script loader
  * @param context Loader context
  */
-private class LoaderBridge(loader: AMDScriptLoader, context: LoaderContext) extends Logging {
+private class LoaderBridge(loader: AMDScriptLoader, var context: LoaderContext) extends Logging {
   import loader.executionContext
 
   def require(moduleName: String): AnyRef = {
@@ -18,19 +18,19 @@ private class LoaderBridge(loader: AMDScriptLoader, context: LoaderContext) exte
     loader.requireLocal(moduleName)(context)
   }
 
-  def require(moduleNames: Array[String], callback: ScriptObjectMirror): Unit = {
+  def require(moduleNames: Array[String], callback: JSObject): Unit = {
     log.trace(s"require([${moduleNames.map(d => s"'$d'").mkString(",")}], $callback)")
     loader.requireAsync(moduleNames).map(modules => callback.call(null, modules.map(_.value): _*))
   }
 
-  def define(dependencies: Array[String], callback: ScriptObjectMirror): Unit  = {
-    log.trace(s"define([${dependencies.map(d => s"'$d'").mkString(",")}], $callback)")
-    loader.define(None, dependencies, callback)(context)
+  def define(dependencies: Array[String], factory: JSObject): Unit  = {
+    log.trace(s"define([${dependencies.map(d => s"'$d'").mkString(",")}], $factory)")
+    loader.define(None, dependencies, factory)(context)
   }
 
-  def define(moduleId: String, dependencies: Array[String], callback: ScriptObjectMirror) = {
-    log.trace(s"define('$moduleId'), [${dependencies.map(d => s"'$d'").mkString(",")}], $callback)")
-    loader.define(Some(moduleId), dependencies, callback)(context)
+  def define(moduleId: String, dependencies: Array[String], factory: JSObject): Unit = {
+    log.trace(s"define('$moduleId'), [${dependencies.map(d => s"'$d'").mkString(",")}], $factory)")
+    loader.define(Some(moduleId), dependencies, factory)(context)
   }
 
 }

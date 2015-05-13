@@ -1,8 +1,7 @@
 package ru.dgolubets.scripting.amd
 
 import java.net.URI
-
-import ru.dgolubets.scripting.internal.LoaderScriptContext
+import javax.script.Bindings
 
 import scala.collection.mutable.ListBuffer
 
@@ -11,9 +10,9 @@ import scala.collection.mutable.ListBuffer
  *
  * @param moduleId AMD module id to use when it is omitted in the definition
  * @param file File being evaluated
- * @param scriptContext Current script context
+ * @param bindings Local bindings
  */
-private case class LoaderContext(moduleId: String, file: URI, scriptContext: LoaderScriptContext){
+private case class LoaderContext(moduleId: String, file: URI, bindings: Bindings){
 
   /**
    * List of module definitions in the context.

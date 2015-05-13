@@ -1,9 +1,8 @@
 package ru.dgolubets.scripting.commonjs
 
 import java.io.File
-import javax.script._
 
-import jdk.nashorn.api.scripting.{JSObject, ScriptObjectMirror}
+import jdk.nashorn.api.scripting.JSObject
 import org.scalatest.FreeSpec
 import ru.dgolubets.scripting.ScriptModuleException
 
@@ -15,20 +14,8 @@ class CommonJsLoaderSpec extends FreeSpec with CommonJsLoaderSpecBase {
 
     "when created" - {
 
-      "expose require" in new Test {
-        engine.eval("require", loader.context) shouldBe a [ScriptObjectMirror]
-      }
-
-      "leave engine scope clean" in new Test {
-        val bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
-        assert(bindings.keySet.size() == 0)
-      }
-
-      "leave global scope clean" in new Test {
-        val bindings = engine.getBindings(ScriptContext.GLOBAL_SCOPE)
-        if(bindings != null) {
-          assert(bindings.keySet.size() == 0)
-        }
+      "create 'require' function on the engine" in new Test {
+        loader.engine.eval("typeof require == 'function'") shouldBe true
       }
 
     }

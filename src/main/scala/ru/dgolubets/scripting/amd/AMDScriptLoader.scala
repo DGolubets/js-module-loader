@@ -2,13 +2,13 @@ package ru.dgolubets.scripting.amd
 
 import java.net.URI
 import java.util.concurrent.Executors
-import javax.script.{ScriptContext, ScriptEngine}
+import javax.script.{Bindings, ScriptContext, ScriptEngine}
 
-import jdk.nashorn.api.scripting.ScriptObjectMirror
+import jdk.nashorn.api.scripting.{NashornScriptEngineFactory, JSObject, NashornScriptEngine}
 import ru.dgolubets.scripting._
-import ru.dgolubets.scripting.internal.LoaderScriptContext
+import ru.dgolubets.scripting.internal.ScriptEngineExtensions._
 import ru.dgolubets.scripting.readers.ScriptModuleReader
-import ru.dgolubets.util.{Resource, Logging}
+import ru.dgolubets.util.{Logging, Resource}
 
 import scala.beans.BeanProperty
 import scala.concurrent._
@@ -16,11 +16,21 @@ import scala.util.Success
 
 object AMDScriptLoader {
   /**
+   * Creates an instance of AMD script loader on a new engine.
+   * @param moduleReader Script reader
+   */
+  def apply(moduleReader: ScriptModuleReader) = {
+    val factory = new NashornScriptEngineFactory
+    val engine = factory.getScriptEngine.asInstanceOf[NashornScriptEngine]
+    new AMDScriptLoader(engine, moduleReader)
+  }
+
+  /**
    * Creates an instance of AMD script loader on the engine.
    * @param engine Engine where a loader should be instantiated
    * @param moduleReader Script reader
    */
-  def apply(engine: ScriptEngine, moduleReader: ScriptModuleReader) =
+  def apply(engine: NashornScriptEngine, moduleReader: ScriptModuleReader) =
     new AMDScriptLoader(engine, moduleReader)
 }
 
@@ -28,10 +38,10 @@ object AMDScriptLoader {
  * AMD script loader.
  * https://github.com/amdjs/amdjs-api/blob/master/AMD.md
  *
- * @param engine Engine where a loader should be instantiated
+ * @param scriptEngine Engine where a loader should be instantiated
  * @param moduleReader Script reader
  */
-class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
+class AMDScriptLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleReader)
   extends ScriptModuleAsyncLoader with Logging {
 
   /**
@@ -65,20 +75,36 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
   private val defaultResolutionContext = ResolutionContext()
 
   /**
-   * Default loader context that is used for modules defined without their own file (i.e. via engine.eval).
+   * Default (top-level) loader context.
    */
-  private val defaultLoaderContext = LoaderContext("", new URI(""), new LoaderScriptContext(engine))
+  private val defaultLoaderContext = LoaderContext("", new URI(""), engine.getBindings(ScriptContext.ENGINE_SCOPE))
 
   /**
    * Undefined value in JavaScript
    */
   private lazy val Undefined = {
-    val global = engine.eval("this").asInstanceOf[ScriptObjectMirror]
+    val global = scriptEngine.eval("this").asInstanceOf[JSObject]
     global.getMember("undefined")
   }
 
-  // set define and require on the context
-  expose(defaultLoaderContext)
+  // set define and require on the engine
+  bind(engine.getBindings(ScriptContext.ENGINE_SCOPE), defaultLoaderContext)
+
+
+  /**
+   * Binds a loader context and a script bindings.
+   * I.e. creates require function there.
+   *
+   * @param bindings Script bindings
+   * @param context Loader context
+   */
+  private def bind(bindings: Bindings, context: LoaderContext): Unit = {
+    val initScript = Resource.readString("/amd.js").get
+    val initFunction = engine.eval(initScript).asInstanceOf[JSObject]
+
+    initFunction.call(null, bindings, new LoaderBridge(this, context))
+  }
+
 
   /**
    * Resolves relative module id.
@@ -96,26 +122,6 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
     else moduleId
   }
 
-  /**
-   * Puts require and define functions on the script context specified in the loader context.
-   * @param loaderContext Loader context
-   */
-  private def expose(loaderContext: LoaderContext): Unit = {
-
-    val moduleBindings = loaderContext.scriptContext.getBindings(LoaderScriptContext.Scopes.Module.id)
-
-    val initScript = Resource.readString("/init.js").get
-    val init = engine.eval(initScript).asInstanceOf[ScriptObjectMirror]
-
-    /*
-    It's very important to execute this with the default engine bindings.
-    Otherwise all objects created in the script will be linked to different instance of nashorn.global,
-    what leads to some sneaky errors.
-
-    Module bindings are passed into init function as a context parameter.
-    */
-    init.call(null, moduleBindings, new LoaderBridge(this, loaderContext))
-  }
 
   /**
    * Loads the module script file.
@@ -132,16 +138,15 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
         For that reason there is a special ScriptContext subclass with an additional scope.
        */
 
-      val moduleScriptContext = new LoaderScriptContext(engine)
-      val context = LoaderContext(module.id, moduleUri, moduleScriptContext)
-
-      // construct new loader context with the script context and expose it to module
-      expose(context)
+      // prepare module private bindings
+      val moduleBindings = scriptEngine.createBindings()
+      val loaderContext = new LoaderContext(module.id, moduleUri, moduleBindings)
+      bind(moduleBindings, loaderContext)
 
       // next - evaluate module script in the script context
       // on error - finish module definition promise with failure
       try {
-        engine.eval(moduleScript, moduleScriptContext)
+        scriptEngine.execute(moduleScript, moduleBindings)
       }
       catch {
         case err: Exception =>
@@ -150,7 +155,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
       }
 
       // publish collected module definitions
-      for(definition <- context.definitions){
+      for(definition <- loaderContext.definitions){
         val definedModule = ensureModule(definition.id)
         if(!definedModule.definition.trySuccess(definition)){
           log.warn(s"Module '${definedModule.id}' has already been defined.")
@@ -167,6 +172,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
     // if load has failed - mark the primary module definition failed too
     loadOperation onFailure {
       case err =>
+        log.error(s"Could not load module: ${module.id}", err)
         module.definition.tryFailure(ScriptModuleException(s"Could not load module: ${module.id}", err))
     }
 
@@ -239,7 +245,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
         case class ModuleInfo(@BeanProperty id: String, @BeanProperty uri: String)
         module.definition.future.map(definition => new ModuleInfo(module.id, definition.uri.toString))
       case "require" =>
-        Future.successful(engine.eval("require", loaderContext.scriptContext))
+        Future.successful(loaderContext.bindings.get("require"))
       case _ =>
         resolveModule(dependency)
     }
@@ -255,10 +261,10 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
   }
 
   /**
-   * ScriptContext with require and define variables.
+   * ScriptEngine being used to load modules.
    * @return
    */
-  override def context: ScriptContext = defaultLoaderContext.scriptContext
+  override def engine: ScriptEngine = scriptEngine
 
   /**
    * Synchronously loads a module by id and relative to current module.
@@ -290,7 +296,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
    * @param loaderContext Loader context
    * @return
    */
-  private[amd] def define(moduleId: Option[String], dependencies: Seq[String], moduleFactory: ScriptObjectMirror)(implicit loaderContext: LoaderContext): Unit = {
+  private[amd] def define(moduleId: Option[String], dependencies: Seq[String], moduleFactory: JSObject)(implicit loaderContext: LoaderContext): Unit = {
     // ensure the module using id from the loader when omitted
     val module = ensureModule(moduleId.getOrElse(loaderContext.moduleId))
 
@@ -323,7 +329,7 @@ class AMDScriptLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
 
           val instanceRef =
             if(dependenciesOrDefault.contains("exports"))
-              engine.eval("new Object()") // {}
+              scriptEngine.eval("new Object()") // {}
             else
               Undefined
 

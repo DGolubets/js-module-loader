@@ -1,7 +1,6 @@
 package ru.dgolubets.scripting.commonjs
 
 import java.io.{File, _}
-import javax.script.ScriptEngineManager
 
 import jdk.nashorn.api.scripting.ScriptObjectMirror
 import org.scalatest._
@@ -13,12 +12,10 @@ trait CommonJsLoaderSpecBase extends TestRegistration with Matchers {
 
   import org.scalatest.TryValues._
 
-  val engineManager = new ScriptEngineManager(null)
   val testsDir = new File("src/test/javascript/commonjs")
 
   trait Test {
-    val engine = engineManager.getEngineByName("nashorn")
-    val loader = CommonJsLoader(engine, testReader(testsDir))
+    val loader = CommonJsLoader(testReader(testsDir))
   }
 
   /**
@@ -36,8 +33,7 @@ trait CommonJsLoaderSpecBase extends TestRegistration with Matchers {
     val testDir = file.getParentFile
     val module = testDir.toURI.relativize(file.toURI).toString
     registerTest(file.toString) {
-      val engine = engineManager.getEngineByName("nashorn")
-      val loader = CommonJsLoader(engine, testReader(testDir))
+      val loader = CommonJsLoader(testReader(testDir))
       loader.require(module).success.value.value shouldBe a[ScriptObjectMirror]
     }
   }

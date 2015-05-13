@@ -1,9 +1,7 @@
 package ru.dgolubets.scripting.amd
 
-import javax.script._
-
-import ru.dgolubets.scripting.ScriptModuleException
 import jdk.nashorn.api.scripting.ScriptObjectMirror
+import ru.dgolubets.scripting.ScriptModuleException
 
 import scala.concurrent.Promise
 
@@ -14,31 +12,25 @@ class AMDScriptLoaderSpec extends AMDScriptLoaderSpecBase {
 
     "created" should {
 
-      "expose define and require" in new Test {
-        engine.eval("define", loader.context) shouldBe a [ScriptObjectMirror]
-        engine.eval("require", loader.context) shouldBe a [ScriptObjectMirror]
+      "create 'require' function on the engine" in new Test {
+        loader.engine.eval("typeof require == 'function'") shouldBe true
+      }
+
+      "create 'define' function on the engine" in new Test {
+        loader.engine.eval("typeof define == 'function'") shouldBe true
       }
 
       "set define.amd property" in new Test {
-        engine.eval("typeof define.amd === 'object'", loader.context) shouldBe true
+        loader.engine.eval("typeof define.amd === 'object'") shouldBe true
       }
 
-      "leave engine scope clean" in new Test {
-        var bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
-        assert(bindings.keySet.size() == 0)
-      }
-
-      "leave global scope clean" in new Test {
-        var bindings = engine.getBindings(ScriptContext.GLOBAL_SCOPE)
-        assert(bindings.keySet.size() == 0)
-      }
     }
 
     "loads modules" should {
       "expose engine scope to modules for read access" in new Test {
         val module = loader.requireAsync("core/readEngineScope")
 
-        engine.put("engineText", "some text")
+        loader.engine.put("engineText", "some text")
         whenReady(module) { m =>
         }
       }
@@ -47,8 +39,8 @@ class AMDScriptLoaderSpec extends AMDScriptLoaderSpecBase {
     "require is called in javascript" should {
       "load module" in new BaseTest {
         val promise = Promise[AnyRef]()
-        engine.put("promise", promise)
-        engine.eval("require(['definitions/object'], function(m){ promise.success(m); })", loader.context)
+        loader.engine.put("promise", promise)
+        loader.engine.eval("require(['definitions/object'], function(m){ promise.success(m); })")
 
         whenReady(promise.future) { m =>
           m shouldNot be (null)

@@ -1,11 +1,11 @@
 package ru.dgolubets.scripting.commonjs
 
 import java.net.URI
-import javax.script.{ScriptContext, ScriptEngine}
+import javax.script.{Bindings, ScriptContext, ScriptEngine}
 
-import jdk.nashorn.api.scripting.ScriptObjectMirror
+import jdk.nashorn.api.scripting.{JSObject, NashornScriptEngine, NashornScriptEngineFactory}
 import ru.dgolubets.scripting.commonjs.exceptions._
-import ru.dgolubets.scripting.internal._
+import ru.dgolubets.scripting.internal.ScriptEngineExtensions._
 import ru.dgolubets.scripting.readers.ScriptModuleReader
 import ru.dgolubets.scripting.{ScriptModule, ScriptModuleException, ScriptModuleSyncLoader}
 import ru.dgolubets.util.{Logging, Resource}
@@ -15,11 +15,21 @@ import scala.util._
 object CommonJsLoader
 {
   /**
+   * Creates an instance of CommonJs script loader on a new engine.
+   * @param moduleReader Script reader
+   */
+  def apply(moduleReader: ScriptModuleReader) = {
+    val factory = new NashornScriptEngineFactory
+    val engine = factory.getScriptEngine.asInstanceOf[NashornScriptEngine]
+    new CommonJsLoader(engine, moduleReader)
+  }
+
+  /**
    * Creates an instance of CommonJs script loader on the engine.
    * @param engine Engine where a loader should be instantiated
    * @param moduleReader Script reader
    */
-  def apply(engine: ScriptEngine, moduleReader: ScriptModuleReader) =
+  def apply(engine: NashornScriptEngine, moduleReader: ScriptModuleReader) =
     new CommonJsLoader(engine, moduleReader)
 }
 
@@ -28,10 +38,10 @@ object CommonJsLoader
  * CommonJs script loader.
  * http://wiki.commonjs.org/wiki/Modules/1.1.1
  *
- * @param engine Engine where a loader should be instantiated
+ * @param scriptEngine Engine where a loader should be instantiated
  * @param moduleReader Script reader
  */
-class CommonJsLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
+class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleReader)
   extends ScriptModuleSyncLoader with Logging {
 
   /**
@@ -53,29 +63,18 @@ class CommonJsLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
   private val defaultResolutionContext = ResolutionContext()
 
   /**
-   * Default bridge (and the only one in the current implementation)
+   * Top level module loader context
    */
-  private val defaultBridge = new CommonJsLoaderBridge(this, CommonJsLoaderContext(defaultResolutionContext))
+  private val defaultLoaderContext = CommonJsLoaderContext(defaultResolutionContext)
 
+  // set require on the default engine context
+  bind(engine.getBindings(ScriptContext.ENGINE_SCOPE), defaultLoaderContext)
+  
   /**
-   * Default script context (and the only one in the current implementation)
-   */
-  private lazy val defaultScriptContext = {
-    val scriptContext = new LoaderScriptContext(
-      engine.getBindings(ScriptContext.GLOBAL_SCOPE),
-      engine.getBindings(ScriptContext.ENGINE_SCOPE),
-      engine.createBindings())
-
-    bindScriptContext(scriptContext, defaultBridge)
-
-    scriptContext
-  }
-
-  /**
-   * ScriptContext where require function is available.
+   * ScriptEngine being used to load modules.
    * @return
    */
-  override def context: ScriptContext = defaultScriptContext
+  override def engine: ScriptEngine = scriptEngine
 
   /**
    * Loads a module.
@@ -85,17 +84,17 @@ class CommonJsLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
   override def require(moduleId: String): Try[ScriptModule] = resolveModule(moduleId)(defaultResolutionContext).map(m => ScriptModule(m))
 
   /**
-   * Binds a script context to a loader bridge.
-   * @param bridge Loader bridge
+   * Creates 'require' function on the bindings
+   * which is bound to the specified loader context.
+   *
+   * @param bindings Script bindings
+   * @param context Loader context
    */
-  private def bindScriptContext(scriptContext: LoaderScriptContext, bridge: CommonJsLoaderBridge): ScriptContext = {
-    val moduleBindings = scriptContext.getBindings(LoaderScriptContext.Scopes.Module.id)
-
+  private def bind(bindings: Bindings, context: CommonJsLoaderContext): Unit = {
     val initScript = Resource.readString("/commonjs.js").get
-    val init = engine.eval(initScript).asInstanceOf[ScriptObjectMirror]
+    val initFunction = engine.eval(initScript).asInstanceOf[JSObject]
 
-    init.call(null, moduleBindings, bridge)
-    scriptContext
+    initFunction.call(null, bindings, new CommonJsLoaderBridge(this, context))
   }
 
   /**
@@ -159,43 +158,28 @@ class CommonJsLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
    * @return
    */
   private def initializeModule(module: Module, moduleDefinition: ModuleDefinition)( implicit resolutionContext: ResolutionContext): Unit = {
-    val exports = engine.eval("new Object()", defaultScriptContext)
+    val exports = scriptEngine.eval("new Object()")
     val instance = ModuleInstance(exports)
 
     // first initialization workflow step
     module.startInitializing(instance)
 
-    // save current context and bindings
-    val prevLoaderContext = defaultBridge.context
-    val prevModuleBindings = context.getBindings(LoaderScriptContext.Scopes.Module.id)
-
-    // set new context
-    defaultBridge.context = new CommonJsLoaderContext(ResolutionContext(module :: resolutionContext.chain))
-
-    // set new bindings
-    val newModuleBindings = engine.createBindings()
-    defaultScriptContext.setBindings(newModuleBindings, LoaderScriptContext.Scopes.Module.id)
-    // have to bind again to write to new module bindings
-    bindScriptContext(defaultScriptContext, defaultBridge)
-    newModuleBindings.put("exports", exports)
+    // prepare module bindings
+    val moduleBindings = scriptEngine.createBindings()
+    bind(moduleBindings, new CommonJsLoaderContext(ResolutionContext(module :: resolutionContext.chain)))
+    moduleBindings.put("exports", exports)
 
     try {
       // wrap script in anonymous function to make a private variable scope
       // it doesn't help with explicit globals though (e.g. "global1 = 'global text'")
       // nashorn writes them directly to global object and it seems impossible to intercept it
       // todo: find a way to forbid explicit global variables
-      val wrappedScript = s"(function(){ var exports = this.exports;\n ${moduleDefinition.script}\n })()"
-      engine.eval(wrappedScript, context)
+      scriptEngine.execute(moduleDefinition.script, moduleBindings)
     }
     catch {
       case err: Exception =>
         log.error(s"Error evaluating module: ${module.id}", err)
         throw new ScriptModuleException(s"Error evaluating module: ${module.id}", err)
-    }
-    finally {
-      // restore module bindings
-      defaultScriptContext.setBindings(prevModuleBindings, LoaderScriptContext.Scopes.Module.id)
-      defaultBridge.context = prevLoaderContext
     }
 
     // last initialization workflow step
@@ -241,7 +225,7 @@ class CommonJsLoader(engine: ScriptEngine, moduleReader: ScriptModuleReader)
   }
 
   /**
-   * Loads a module by id and relative to current module.
+   * Loads a module by id relative to current module.
    * @param moduleId Module id
    * @param loaderContext Loader context
    * @return

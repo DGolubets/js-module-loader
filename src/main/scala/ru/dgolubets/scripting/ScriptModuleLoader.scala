@@ -1,9 +1,6 @@
 package ru.dgolubets.scripting
 
-import javax.script.ScriptContext
-
-import scala.concurrent._
-import scala.concurrent.ExecutionContext.Implicits.global
+import javax.script.ScriptEngine
 
 /**
  * Common script module loader interface.
@@ -11,8 +8,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 trait ScriptModuleLoader {
 
   /**
-   * ScriptContext where require function is available.
+   * ScriptEngine being used to load modules.
    * @return
    */
-  def context: ScriptContext
+  def engine: ScriptEngine
 }
