@@ -4,12 +4,12 @@ import java.net.URI
 import javax.script.{Bindings, ScriptContext, ScriptEngine}
 
 import jdk.nashorn.api.scripting.{JSObject, NashornScriptEngine, NashornScriptEngineFactory}
+import ru.dgolubets.internal.util.{Logging, Resource}
 import ru.dgolubets.scripting.commonjs.internal._
 import ru.dgolubets.scripting.commonjs.internal.exceptions._
 import ru.dgolubets.scripting.internal.ScriptEngineExtensions._
 import ru.dgolubets.scripting.readers.ScriptModuleReader
 import ru.dgolubets.scripting.{ScriptModule, ScriptModuleException, ScriptModuleSyncLoader}
-import ru.dgolubets.internal.util.{Logging, Resource}
 
 import scala.util._
 
@@ -160,15 +160,26 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
    */
   private def initializeModule(module: Module, moduleDefinition: ModuleDefinition)( implicit resolutionContext: ResolutionContext): Unit = {
     val exports = scriptEngine.eval("new Object()")
-    val instance = ModuleInstance(exports)
 
     // first initialization workflow step
-    module.startInitializing(instance)
+    module.startInitializing(ModuleInstance(exports))
 
     // prepare module bindings
     val moduleBindings = scriptEngine.createBindings()
     bind(moduleBindings, new CommonJsLoaderContext(ResolutionContext(module :: resolutionContext.chain)))
+
+    // module should have exports variable
     moduleBindings.put("exports", exports)
+
+    // module should have module variable
+    val moduleObject = scriptEngine.createBindings()
+    moduleObject.put("id", module.id)
+    moduleObject.put("uri", moduleDefinition.uri.toString)
+    // 'module.exports' seems to be de facto standard
+    // it allows a module to return a single export by assigning to it
+    moduleObject.put("exports", exports)
+
+    moduleBindings.put("module", moduleObject)
 
     try {
       // wrap script in anonymous function to make a private variable scope
@@ -184,7 +195,7 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
     }
 
     // last initialization workflow step
-    module.initialize(instance)
+    module.initialize(ModuleInstance(moduleObject.get("exports")))
   }
 
   /**
