@@ -1,6 +1,6 @@
-package ru.dgolubets.scripting.commonjs.exceptions
+package ru.dgolubets.scripting.commonjs.internal.exceptions
 
-import ru.dgolubets.scripting.commonjs.Module
+import ru.dgolubets.scripting.commonjs.internal.Module
 
 
 class UnexpectedModuleState(state: Module.State) extends RuntimeException(s"Unexpected module state: $state")

@@ -1,7 +1,8 @@
-package ru.dgolubets.scripting.amd
+package ru.dgolubets.scripting.amd.internal
 
 import jdk.nashorn.api.scripting.JSObject
 import ru.dgolubets.internal.util.Logging
+import ru.dgolubets.scripting.amd.AMDScriptLoader
 
 /**
  * JS to JVM proxy.
@@ -10,7 +11,7 @@ import ru.dgolubets.internal.util.Logging
  * @param loader Script loader
  * @param context Loader context
  */
-private class LoaderBridge(loader: AMDScriptLoader, var context: LoaderContext) extends Logging {
+private[amd] class LoaderBridge(loader: AMDScriptLoader, var context: LoaderContext) extends Logging {
   import loader.executionContext
 
   def require(moduleName: String): AnyRef = {

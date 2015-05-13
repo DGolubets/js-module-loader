@@ -1,10 +1,10 @@
-package ru.dgolubets.scripting.commonjs
+package ru.dgolubets.scripting.commonjs.internal
 
 import scala.concurrent._
 import scala.reflect.ClassTag
 import scala.util._
 
-private object Module {
+private[commonjs] object Module {
 
   /**
    * Base module state.
@@ -57,7 +57,7 @@ private object Module {
  *
  * @param id Absolute module id
  */
-private case class Module(id: String) {
+private[commonjs] case class Module(id: String) {
   import Module._
 
   private object _lock

@@ -4,7 +4,8 @@ import java.net.URI
 import javax.script.{Bindings, ScriptContext, ScriptEngine}
 
 import jdk.nashorn.api.scripting.{JSObject, NashornScriptEngine, NashornScriptEngineFactory}
-import ru.dgolubets.scripting.commonjs.exceptions._
+import ru.dgolubets.scripting.commonjs.internal._
+import ru.dgolubets.scripting.commonjs.internal.exceptions._
 import ru.dgolubets.scripting.internal.ScriptEngineExtensions._
 import ru.dgolubets.scripting.readers.ScriptModuleReader
 import ru.dgolubets.scripting.{ScriptModule, ScriptModuleException, ScriptModuleSyncLoader}

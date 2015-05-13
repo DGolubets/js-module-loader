@@ -1,4 +1,4 @@
-package ru.dgolubets.scripting.amd
+package ru.dgolubets.scripting.amd.internal
 
 import scala.concurrent._
 
@@ -7,7 +7,7 @@ import scala.concurrent._
  * @param id Absolute module id
  * @param definition Module definition. It is added asynchronously during javascript code evaluation
  */
-private case class Module(id: String, definition: Promise[ModuleDefinition]) {
+private[amd] case class Module(id: String, definition: Promise[ModuleDefinition]) {
   private object _lock
   private var _instance: Option[Future[ModuleInstance]] = None
 

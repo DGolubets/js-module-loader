@@ -6,6 +6,7 @@ import javax.script.{Bindings, ScriptContext, ScriptEngine}
 
 import jdk.nashorn.api.scripting.{NashornScriptEngineFactory, JSObject, NashornScriptEngine}
 import ru.dgolubets.scripting._
+import ru.dgolubets.scripting.amd.internal._
 import ru.dgolubets.scripting.internal.ScriptEngineExtensions._
 import ru.dgolubets.scripting.readers.ScriptModuleReader
 import ru.dgolubets.internal.util.{Logging, Resource}

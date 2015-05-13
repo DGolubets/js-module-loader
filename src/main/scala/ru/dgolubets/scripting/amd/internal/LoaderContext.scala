@@ -1,4 +1,4 @@
-package ru.dgolubets.scripting.amd
+package ru.dgolubets.scripting.amd.internal
 
 import java.net.URI
 import javax.script.Bindings
@@ -12,7 +12,7 @@ import scala.collection.mutable.ListBuffer
  * @param file File being evaluated
  * @param bindings Local bindings
  */
-private case class LoaderContext(moduleId: String, file: URI, bindings: Bindings){
+private[amd] case class LoaderContext(moduleId: String, file: URI, bindings: Bindings){
 
   /**
    * List of module definitions in the context.

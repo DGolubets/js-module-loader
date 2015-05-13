@@ -1,4 +1,4 @@
-package ru.dgolubets.scripting.amd
+package ru.dgolubets.scripting.amd.internal
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
@@ -16,7 +16,7 @@ import scala.concurrent._
  *            It can be either {} if module uses exports or undefined.
  * @param ready Future initialized javascript value
  */
-private class ModuleInstance(raw: AnyRef, ready: Future[AnyRef]){
+private[amd] class ModuleInstance(raw: AnyRef, ready: Future[AnyRef]){
 
   // I guess it's enough to use volatile here
   @volatile private var _value = raw
@@ -28,6 +28,6 @@ private class ModuleInstance(raw: AnyRef, ready: Future[AnyRef]){
   }
 }
 
-private object ModuleInstance{
+private[amd] object ModuleInstance{
   def apply(raw: AnyRef, ready: Future[AnyRef]) = new ModuleInstance(raw, ready)
 }

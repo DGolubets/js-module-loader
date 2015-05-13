@@ -1,4 +1,4 @@
-package ru.dgolubets.scripting.commonjs
+package ru.dgolubets.scripting.commonjs.internal
 
 import java.net.URI
 
@@ -8,4 +8,4 @@ import java.net.URI
  * @param uri Module file URI
  * @param script Module script
  */
-private case class ModuleDefinition(id: String, uri: URI, script: String)
+private[commonjs] case class ModuleDefinition(id: String, uri: URI, script: String)
