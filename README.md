@@ -2,18 +2,18 @@
 AMD and CommonJs loader for JVM
 
 # Status
-AMD: works, but requires more testing and a bit more features (shim config, plugins)
+0.1-SNAPSHOT
 
-CommonJs: not here yet, but will have the same interface
+AMD: works, but requires more testing.
+
+CommonJs: works, but requires more testing.
 
 I plan to test it for Java compatibility later and will make a Java compartible wrapper if needed.
 
-# Usage
-Loader is created as follows
+# AMD
+AMD Loader is created as follows
 ```
-val engineManager = new ScriptEngineManager(null)
-val engine = engineManager.getEngineByName("nashorn")
-val loader = AMDScriptLoader(engine, FileModuleReader("src/javascript/amd"))
+val loader = AMDScriptLoader(FileModuleReader("src/javascript/amd"))
 ```
 then it can be used in Scala
 ```
@@ -28,8 +28,33 @@ loader.requireAsync(Seq("React", "CommentBox")).map {
 and in Javascript
 ```
 // javascript should be evaluated with loader.context
-engine.eval("require(['app'], function(app){ console.log(app); })", loader.context)
+loader.engine.eval("require(['app'], function(app){ console.log(app); })")
 ```
+
+# CommonJs
+CommonJs Loader is created as follows
+```
+val loader = CommonJsLoader(FileModuleReader("src/javascript/commonjs"))
+```
+then it can be used in Scala
+```
+loader.require("app") match { 
+  case Success(module) => ???
+  case _ => ???
+}
+```
+and in Javascript
+```
+// javascript should be evaluated with loader.context
+loader.engine.eval("require('app').startMyApp();")
+```
+
+# Thread safety
+Loaders are safe to use from different threads.
+However, once you got javascript objects or deal with a ScriptEngine you are one on one with a Nashorn which is not thread safe.
+You can read more about Nashorn and MT-safety there: https://blogs.oracle.com/nashorn/entry/nashorn_multi_threading_and_mt
+
+I plan to add a small thread safety guide here later.
 
 # Known Issues
 
