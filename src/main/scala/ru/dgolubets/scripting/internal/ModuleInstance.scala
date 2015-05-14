@@ -1,4 +1,4 @@
-package ru.dgolubets.scripting.commonjs.internal
+package ru.dgolubets.scripting.internal
 
 /**
  * Module instance.
@@ -8,4 +8,4 @@ package ru.dgolubets.scripting.commonjs.internal
  *
  * @param value Javascript value.
  */
-private[commonjs] case class ModuleInstance(value: AnyRef)
+private[scripting] case class ModuleInstance(value: AnyRef)

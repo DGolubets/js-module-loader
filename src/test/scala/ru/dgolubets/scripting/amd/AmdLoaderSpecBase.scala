@@ -7,12 +7,12 @@ import org.scalatest.{Matchers, WordSpec}
 import ru.dgolubets.scripting.readers.FileModuleReader
 import ru.dgolubets.internal.util.Resource
 
-trait AMDScriptLoaderSpecBase extends WordSpec with Matchers with ScalaFutures  {
+trait AmdLoaderSpecBase extends WordSpec with Matchers with ScalaFutures  {
 
   val engineManager = new ScriptEngineManager(null)
 
   trait Test {
-    val loader = AMDScriptLoader(FileModuleReader("src/test/javascript/amd"))
+    val loader = AmdLoader(FileModuleReader("src/test/javascript/amd"))
   }
 
   trait BaseTest extends Test {

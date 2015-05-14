@@ -12,11 +12,11 @@ import scala.collection.mutable.ListBuffer
  * @param file File being evaluated
  * @param bindings Local bindings
  */
-private[amd] case class LoaderContext(moduleId: String, file: URI, bindings: Bindings){
+private[amd] case class AmdLoaderContext(moduleId: String, file: Option[URI], bindings: Bindings){
 
   /**
    * List of module definitions in the context.
    */
-  val definitions = ListBuffer[ModuleDefinition]()
+  val definitions = ListBuffer[AmdModuleDefinition]()
 
 }

@@ -6,9 +6,9 @@ import ru.dgolubets.scripting.ScriptModuleException
 import scala.concurrent.Promise
 
 // https://github.com/amdjs/amdjs-api/blob/master/AMD.md
-class AMDScriptLoaderSpec extends AMDScriptLoaderSpecBase {
+class AmdLoaderSpec extends AmdLoaderSpecBase {
 
-  "AMDScriptLoader" when {
+  "AmdLoader" when {
 
     "created" should {
 

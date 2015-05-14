@@ -1,4 +1,6 @@
-package ru.dgolubets.scripting.commonjs.internal
+package ru.dgolubets.scripting.amd.internal
+
+import ru.dgolubets.scripting.internal.Module
 
 /**
  * Describes resolution process state.
@@ -6,7 +8,7 @@ package ru.dgolubets.scripting.commonjs.internal
  *
  * @param chain Chain of resolved modules
  */
-private[commonjs] case class ResolutionContext(chain: List[Module] = Nil) {
+private[amd] case class AmdResolutionContext(chain: List[Module[AmdModuleDefinition]] = Nil) {
 
   /**
    * The module being resolved.

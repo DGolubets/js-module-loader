@@ -7,6 +7,7 @@ import jdk.nashorn.api.scripting.{JSObject, NashornScriptEngine, NashornScriptEn
 import ru.dgolubets.internal.util.{Logging, Resource}
 import ru.dgolubets.scripting.commonjs.internal._
 import ru.dgolubets.scripting.commonjs.internal.exceptions._
+import ru.dgolubets.scripting.internal.{ModuleList, ModuleInstance, Module}
 import ru.dgolubets.scripting.internal.ScriptEngineExtensions._
 import ru.dgolubets.scripting.readers.ScriptModuleReader
 import ru.dgolubets.scripting.{ScriptModule, ScriptModuleException, ScriptModuleSyncLoader}
@@ -46,22 +47,17 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
   extends ScriptModuleSyncLoader with Logging {
 
   /**
-   * Synchronization object for modules list
-   */
-  private object _modulesLock
-
-  /**
    * List of the modules.
    * Every module that was required explicitly or through dependency chain is added to the list.
    *
    * The key of a module is it's absolute module id.
    */
-  private var modules = Map[String, Module]()
+  private val modules = new ModuleList[CommonJsModuleDefinition]
 
   /**
    * Top level module resolution context
    */
-  private val defaultResolutionContext = ResolutionContext()
+  private val defaultResolutionContext = CommonJsResolutionContext()
 
   /**
    * Top level module loader context
@@ -104,7 +100,7 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
    * @param context Resolution context
    * @return Absolute module id
    */
-  private def resolveModuleId(moduleId: String)(implicit context: ResolutionContext): String = {
+  private def resolveModuleId(moduleId: String)(implicit context: CommonJsResolutionContext): String = {
     val absoluteId = if (moduleId.startsWith(".")) {
       // A module identifier is "relative" if the first term is "." or ".."
 
@@ -118,29 +114,15 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
   }
 
   /**
-   * Gets or adds an empty module.
-   * @param id Absolute module id
-   * @return
-   */
-  private def ensureModule(id: String) = _modulesLock.synchronized {
-    // synchronization is required cos it can be called in futures from different threads
-    modules.getOrElse(id, {
-      val module = Module(id)
-      modules += (id -> module)
-      module
-    })
-  }
-
-  /**
    * Loads the module script file.
    * @param moduleId Module id
    */
-  private def loadModule(moduleId: String): ModuleDefinition = {
+  private def loadModule(moduleId: String): CommonJsModuleDefinition = {
     log.debug(s"Loading module: $moduleId")
     val moduleUri = URI.create(moduleId)
 
     val definition = moduleReader.read(moduleUri) map { moduleScript =>
-      ModuleDefinition(moduleId, moduleUri, moduleScript)
+      CommonJsModuleDefinition(moduleId, Some(moduleUri), moduleScript)
     } recover {
       case err =>
         log.error(s"Error loading module: $moduleId", err)
@@ -158,7 +140,7 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
    * @param resolutionContext Resolution context
    * @return
    */
-  private def initializeModule(module: Module, moduleDefinition: ModuleDefinition)( implicit resolutionContext: ResolutionContext): Unit = {
+  private def initializeModule(module: Module[CommonJsModuleDefinition], moduleDefinition: CommonJsModuleDefinition)( implicit resolutionContext: CommonJsResolutionContext): Unit = {
     val exports = scriptEngine.eval("new Object()")
 
     // first initialization workflow step
@@ -166,7 +148,7 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
 
     // prepare module bindings
     val moduleBindings = scriptEngine.createBindings()
-    bind(moduleBindings, new CommonJsLoaderContext(ResolutionContext(module :: resolutionContext.chain)))
+    bind(moduleBindings, new CommonJsLoaderContext(CommonJsResolutionContext(module :: resolutionContext.chain)))
 
     // module should have exports variable
     moduleBindings.put("exports", exports)
@@ -174,7 +156,7 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
     // module should have module variable
     val moduleObject = scriptEngine.createBindings()
     moduleObject.put("id", module.id)
-    moduleObject.put("uri", moduleDefinition.uri.toString)
+    moduleObject.put("uri", moduleDefinition.uri.map(_.toString))
     // 'module.exports' seems to be de facto standard
     // it allows a module to return a single export by assigning to it
     moduleObject.put("exports", exports)
@@ -203,19 +185,24 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
    * @param relativeId Module relative id
    * @return
    */
-  private def resolveModule(relativeId: String)( implicit resolutionContext: ResolutionContext): Try[AnyRef] = Try {
+  private def resolveModule(relativeId: String)( implicit resolutionContext: CommonJsResolutionContext): Try[AnyRef] = Try {
     val moduleId = resolveModuleId(relativeId)
     log.debug(s"Resolving module: $moduleId")
 
-    val module = ensureModule(moduleId)
+    val module = modules(moduleId)
 
-    module.lockInState[Module.Empty]{ _ =>
-      module.startLoading()
-      module.load(loadModule(moduleId))
+    try {
+      module.lockIfState[Module.Empty] { _ =>
+        module.startLoading()
+        module.load(loadModule(moduleId))
+      }
+
+      module.lockIfState[Module.Loaded[CommonJsModuleDefinition]] { state =>
+        initializeModule(module, state.definition)
+      }
     }
-
-    module.lockInState[Module.Loaded]{ state =>
-      initializeModule(module, state.definition)
+    catch {
+      case err: Throwable => module.fail(err)
     }
 
     if(resolutionContext.chain.contains(module)){
@@ -224,13 +211,15 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
       log.debug(s"Circular dependency detected: ${module.id}")
 
       module.state match {
-        case state: Module.Initializing => state.instance.value
+        case Module.Initializing(instance) => instance.value
+        case Module.Error(err) => throw err
         case other => throw UnexpectedModuleState(other)
       }
     }
     else {
       module.state match {
-        case state: Module.Initialized => state.instance.value
+        case Module.Initialized(instance) => instance.value
+        case Module.Error(err) => throw err
         case other => throw UnexpectedModuleState(other)
       }
     }
