@@ -1,5 +1,5 @@
 # js-module-loader
-AMD and CommonJs loaders for JVM
+AMD and CommonJs loaders for Scala.
 
 # Status
 0.1-SNAPSHOT
@@ -7,8 +7,6 @@ AMD and CommonJs loaders for JVM
 AMD: works, but requires more testing.
 
 CommonJs: works, but requires more testing.
-
-I plan to test it for Java compatibility later and will make a Java compatible wrapper if needed.
 
 # AMD
 AMD Loader is created as follows
