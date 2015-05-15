@@ -5,20 +5,20 @@ import scala.collection.concurrent
 /**
  * Module list.
  */
-private[jsmoduleloader] class ModuleList[T <: ModuleDefinition] {
-  private val _modules = concurrent.TrieMap[String, Module[T]]()
+private[jsmoduleloader] class ModuleList[Definition] {
+  private val _modules = concurrent.TrieMap[String, Module[Definition]]()
 
   /**
    * Gets a module.
    * @param id Module id
    * @return
    */
-  def get(id: String): Option[Module[T]] = _modules.get(id)
+  def get(id: String): Option[Module[Definition]] = _modules.get(id)
 
   /**
    * Gets or creates a module.
    * @param id Module id
    * @return
    */
-  def apply(id: String): Module[T] = _modules.getOrElseUpdate(id, Module[T](id))
+  def apply(id: String): Module[Definition] = _modules.getOrElseUpdate(id, Module[T](id))
 }

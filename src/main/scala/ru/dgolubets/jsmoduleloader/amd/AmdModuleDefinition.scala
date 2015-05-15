@@ -4,7 +4,6 @@ import java.net.URI
 import javax.script.Bindings
 
 import jdk.nashorn.api.scripting.JSObject
-import ru.dgolubets.jsmoduleloader.internal.ModuleDefinition
 
 /**
  * AMD module definition.
@@ -15,4 +14,4 @@ import ru.dgolubets.jsmoduleloader.internal.ModuleDefinition
  */
 private case class AmdModuleDefinition(id: String, uri: Option[URI],
                                             dependencies: Seq[String], moduleFactory: JSObject,
-                                            moduleBindings: Bindings) extends ModuleDefinition
+                                            moduleBindings: Bindings)
