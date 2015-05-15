@@ -20,5 +20,5 @@ private[jsmoduleloader] class ModuleList[Definition] {
    * @param id Module id
    * @return
    */
-  def apply(id: String): Module[Definition] = _modules.getOrElseUpdate(id, Module[T](id))
+  def apply(id: String): Module[Definition] = _modules.getOrElseUpdate(id, Module[Definition](id))
 }
