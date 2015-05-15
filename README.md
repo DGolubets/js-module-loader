@@ -1,5 +1,5 @@
 # js-module-loader
-AMD and CommonJs loader for JVM
+AMD and CommonJs loaders for JVM
 
 # Status
 0.1-SNAPSHOT
@@ -8,12 +8,12 @@ AMD: works, but requires more testing.
 
 CommonJs: works, but requires more testing.
 
-I plan to test it for Java compatibility later and will make a Java compartible wrapper if needed.
+I plan to test it for Java compatibility later and will make a Java compatible wrapper if needed.
 
 # AMD
 AMD Loader is created as follows
 ```
-val loader = AMDScriptLoader(FileModuleReader("src/javascript/amd"))
+val loader = AmdLoader(FileModuleReader("src/javascript/amd"))
 ```
 then it can be used in Scala
 ```
