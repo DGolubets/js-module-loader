@@ -1,12 +1,15 @@
 package ru.dgolubets.jsmoduleloader.internal
 
-import grizzled.slf4j.Logger
+import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
+
 
 /**
  * Logging mixin.
  */
 private[dgolubets] trait Logging {
 
-  protected lazy val log = Logger(this.getClass)
+  @transient
+  protected lazy val log = Logger(LoggerFactory.getLogger(this.getClass))
 
 }
