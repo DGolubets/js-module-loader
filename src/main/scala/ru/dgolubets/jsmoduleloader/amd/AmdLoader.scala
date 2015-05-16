@@ -48,8 +48,10 @@ class AmdLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleRea
    * ScriptEngine is NOT thread safe!
    * Therefore all asynchronous operations that work with ScriptEngine should be executed sequentially.
    * That's why SingleThreadExecutor is used here.
+   *
+   * Loader should not block JVM from exiting. So the thread should be set to daemon.
    */
-  private[jsmoduleloader] implicit val executionContext = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor())
+  private[jsmoduleloader] implicit val executionContext = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor(new DaemonThreadFactory()))
 
   /**
    * List of the modules.
