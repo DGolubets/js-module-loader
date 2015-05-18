@@ -12,9 +12,20 @@ class CommonJsLoaderSpec extends FreeSpec with CommonJsLoaderSpecBase {
 
   "CommonJsLoader" - {
 
+    "created with it's own engine" - {
+      "should set globals" in new Test {
+        loader.engine.eval("typeof global === 'object'") shouldBe true
+        loader.engine.eval("typeof console === 'object'") shouldBe true
+        loader.engine.eval("typeof console.log === 'function'") shouldBe true
+        loader.engine.eval("typeof console.debug === 'function'") shouldBe true
+        loader.engine.eval("typeof console.warn === 'function'") shouldBe true
+        loader.engine.eval("typeof console.error === 'function'") shouldBe true
+      }
+    }
+
     "when created" - {
 
-      "create 'require' function on the engine" in new Test {
+      "should create 'require' function on the engine" in new Test {
         loader.engine.eval("typeof require == 'function'") shouldBe true
       }
 

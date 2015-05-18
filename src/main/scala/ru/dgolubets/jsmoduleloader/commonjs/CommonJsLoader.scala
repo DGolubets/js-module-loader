@@ -20,6 +20,10 @@ object CommonJsLoader
   def apply(moduleReader: ScriptModuleReader) = {
     val factory = new NashornScriptEngineFactory
     val engine = factory.getScriptEngine.asInstanceOf[NashornScriptEngine]
+
+    // set engine polyfill when it's created by the loader
+    engine.eval(Resource.readString("/polyfill.js").get)
+
     new CommonJsLoader(engine, moduleReader)
   }
 
