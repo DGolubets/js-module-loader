@@ -4,7 +4,7 @@ import java.util.concurrent.CompletableFuture
 
 /**
  * Asynchronous script module loader interface.
- * Java compatible  interface.
+ * Java compatible interface.
  */
 trait AsyncScriptModuleLoader extends ScriptModuleLoader {
 

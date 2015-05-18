@@ -2,7 +2,7 @@ package ru.dgolubets.jsmoduleloader.japi
 
 /**
  * Synchronous script module loader interface.
- * Java compatible  interface.
+ * Java compatible interface.
  */
 trait SyncScriptModuleLoader extends ScriptModuleLoader {
 

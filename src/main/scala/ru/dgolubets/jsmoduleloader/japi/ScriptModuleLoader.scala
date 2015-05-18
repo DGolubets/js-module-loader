@@ -4,7 +4,7 @@ import javax.script.ScriptEngine
 
 /**
  * Common script module loader interface.
- * Java compatible  interface.
+ * Java compatible interface.
  */
 trait ScriptModuleLoader {
 
