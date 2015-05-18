@@ -5,7 +5,7 @@ import scala.util.Try
 /**
  * Synchronous script module loader interface.
  */
-trait ScriptModuleSyncLoader extends ScriptModuleLoader {
+trait SyncScriptModuleLoader extends ScriptModuleLoader {
 
   /**
    * Loads a module.

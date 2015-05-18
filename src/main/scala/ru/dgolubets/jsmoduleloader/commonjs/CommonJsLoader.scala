@@ -7,7 +7,7 @@ import jdk.nashorn.api.scripting.{JSObject, NashornScriptEngine, NashornScriptEn
 import ru.dgolubets.jsmoduleloader.internal.ScriptEngineExtensions._
 import ru.dgolubets.jsmoduleloader.internal.{Resource, _}
 import ru.dgolubets.jsmoduleloader.readers.ScriptModuleReader
-import ru.dgolubets.jsmoduleloader.{ScriptModule, ScriptModuleException, ScriptModuleSyncLoader}
+import ru.dgolubets.jsmoduleloader.{ScriptModule, ScriptModuleException, SyncScriptModuleLoader}
 
 import scala.util._
 
@@ -45,7 +45,7 @@ object CommonJsLoader
  * @param moduleReader Script reader
  */
 class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleReader)
-  extends ScriptModuleSyncLoader with Logging {
+  extends SyncScriptModuleLoader with Logging {
 
   /**
    * List of the modules.

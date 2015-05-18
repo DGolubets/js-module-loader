@@ -1,12 +1,13 @@
 package ru.dgolubets.jsmoduleloader
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
+import scala.concurrent.Future
 
 /**
  * Asynchronous script module loader interface.
  */
-trait ScriptModuleAsyncLoader extends ScriptModuleLoader {
+trait AsyncScriptModuleLoader extends ScriptModuleLoader {
+
+  import scala.concurrent.ExecutionContext.Implicits.global
 
   /**
    * Loads a module.

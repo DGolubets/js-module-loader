@@ -5,10 +5,10 @@ import java.util.concurrent.Executors
 import javax.script.{Bindings, ScriptContext, ScriptEngine}
 
 import jdk.nashorn.api.scripting.{JSObject, NashornScriptEngine, NashornScriptEngineFactory}
-import ru.dgolubets.jsmoduleloader._
 import ru.dgolubets.jsmoduleloader.internal.ScriptEngineExtensions._
 import ru.dgolubets.jsmoduleloader.internal.{Resource, _}
 import ru.dgolubets.jsmoduleloader.readers.ScriptModuleReader
+import ru.dgolubets.jsmoduleloader.{AsyncScriptModuleLoader, ScriptModule, ScriptModuleException}
 
 import scala.concurrent._
 
@@ -44,7 +44,7 @@ object AmdLoader {
  * @param moduleReader Script reader
  */
 class AmdLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleReader)
-  extends ScriptModuleAsyncLoader with Logging {
+  extends AsyncScriptModuleLoader with Logging {
 
   /**
    * Execution context for module loading.
