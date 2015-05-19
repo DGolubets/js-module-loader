@@ -20,7 +20,9 @@ loader.requireAsync("app").map { module =>
 }
 loader.requireAsync(Seq("React", "CommentBox")).map {
   case Seq(ScriptModule(react: ScriptObjectMirror), ScriptModule(commentBox: ScriptObjectMirror)) =>
-    val commentBoxHtml = react.callMember("renderToString", react.callMember("createElement", commentBox)).toString
+    val commentBoxHtml = loader.lock {
+      react.callMember("renderToString", react.callMember("createElement", commentBox)).toString
+    }
 }
 ```
 and in Javascript
@@ -52,7 +54,12 @@ Loaders are safe to use from different threads.
 However, once you got javascript objects or deal with a ScriptEngine you are one on one with a Nashorn which is not thread safe.
 You can read more about Nashorn and MT-safety there: https://blogs.oracle.com/nashorn/entry/nashorn_multi_threading_and_mt
 
-I plan to add a small thread safety guide here later.
+To synchronize the loader and external calls to the script engine and script objects there is a special method "lock" on the base interface.
+```
+loader.lock {
+  // now it's safe to call engine.eval or scriptObjectMirror.callMember
+}
+```
 
 # Known Issues
 
