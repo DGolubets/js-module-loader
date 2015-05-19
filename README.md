@@ -1,12 +1,10 @@
 # js-module-loader
 AMD and CommonJs loaders for Scala.
 
-# Status
-0.1-SNAPSHOT
-
-AMD: works, but requires more testing.
-
-CommonJs: works, but requires more testing.
+# Setup
+```
+libraryDependencies += "ru.dgolubets" %% "js-module-loader" % "0.1.0"
+```
 
 # AMD
 AMD Loader is created as follows
