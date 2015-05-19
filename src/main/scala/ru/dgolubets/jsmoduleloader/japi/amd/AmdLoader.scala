@@ -1,6 +1,6 @@
 package ru.dgolubets.jsmoduleloader.japi.amd
 
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.{Callable, CompletableFuture}
 import javax.script.ScriptEngine
 
 import jdk.nashorn.api.scripting.NashornScriptEngine
@@ -26,4 +26,6 @@ class AmdLoader private(loader: api.amd.AmdLoader)
   def requireAsync(moduleId: String): CompletableFuture[ScriptModule] = loader.requireAsync(moduleId).map(m => asJavaScriptModule(m))
 
   override def getEngine(): ScriptEngine = loader.engine
+
+  override def lock(code: Runnable): Unit = loader.lock(code.run())
 }

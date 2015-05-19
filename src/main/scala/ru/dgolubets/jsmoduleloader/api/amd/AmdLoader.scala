@@ -81,7 +81,7 @@ class AmdLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleRea
   /**
    * Undefined value in JavaScript
    */
-  private lazy val Undefined = {
+  private lazy val Undefined = this.lock {
     val global = scriptEngine.eval("this").asInstanceOf[JSObject]
     global.getMember("undefined")
   }
@@ -113,9 +113,10 @@ class AmdLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleRea
    */
   private def bind(bindings: Bindings, context: AmdLoaderContext): Unit = {
     val initScript = Resource.readString("/amd/bind.js").get
-    val initFunction = engine.eval(initScript).asInstanceOf[JSObject]
-
-    initFunction.call(null, bindings, new AmdLoaderBridge(this, context))
+    this.lock {
+      val initFunction = engine.eval(initScript).asInstanceOf[JSObject]
+      initFunction.call(null, bindings, new AmdLoaderBridge(this, context))
+    }
   }
 
   /**
@@ -234,14 +235,14 @@ class AmdLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleRea
        */
 
       // prepare module private bindings
-      val moduleBindings = scriptEngine.createBindings()
+      val moduleBindings = this.lock { scriptEngine.createBindings() }
       val loaderContext = new AmdLoaderContext(module.id, Some(moduleUri), moduleBindings)
       bind(moduleBindings, loaderContext)
 
       // next - evaluate module script in the script context
       // on error - finish module definition promise with failure
       try {
-        scriptEngine.execute(moduleScript, moduleBindings)
+        this.lock { scriptEngine.execute(moduleScript, moduleBindings) }
       }
       catch {
         case err: Exception =>
@@ -306,7 +307,7 @@ class AmdLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleRea
       */
       val initialValue =
         if(dependenciesOrDefault.contains("exports"))
-          scriptEngine.eval("new Object()") // {}
+          this.lock{ scriptEngine.eval("new Object()") } // {}
         else
           Undefined
 
@@ -318,12 +319,14 @@ class AmdLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleRea
           case "exports" =>
             Future.successful(initialValue)
           case "module" =>
-            val moduleObject = engine.createBindings()
-            moduleObject.put("id", module.id)
-            moduleDefinition.uri.map { uri =>
-              moduleObject.put("uri", uri.toString)
+            this.lock {
+              val moduleObject = engine.createBindings()
+              moduleObject.put("id", module.id)
+              moduleDefinition.uri.map { uri =>
+                moduleObject.put("uri", uri.toString)
+              }
+              Future.successful(moduleObject)
             }
-            Future.successful(moduleObject)
           case "require" =>
             Future.successful(moduleDefinition.moduleBindings.get("require"))
           case _ =>
@@ -332,12 +335,14 @@ class AmdLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModuleRea
       }
 
       val result = Future.sequence(dependenciesOrDefault.map(d => resolveDependency(d))).map { deps =>
-        moduleDefinition.moduleFactory.call(null, deps: _*) match {
-          case Undefined =>
-            // when factory returned undefined - then it's likely it uses 'exports'
-            initialValue
-          case other =>
-            other
+        this.lock {
+          moduleDefinition.moduleFactory.call(null, deps: _*) match {
+            case Undefined =>
+              // when factory returned undefined - then it's likely it uses 'exports'
+              initialValue
+            case other =>
+              other
+          }
         }
       }
 

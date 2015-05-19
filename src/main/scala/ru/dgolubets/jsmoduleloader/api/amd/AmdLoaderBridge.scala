@@ -20,7 +20,9 @@ private class AmdLoaderBridge(loader: AmdLoader, var context: AmdLoaderContext) 
 
   def require(moduleNames: Array[String], callback: JSObject): Unit = {
     log.trace(s"require([${moduleNames.map(d => s"'$d'").mkString(",")}], $callback)")
-    loader.requireAsync(moduleNames).map(modules => callback.call(null, modules.map(_.value): _*))
+    loader.requireAsync(moduleNames).map(modules => loader.lock{
+      callback.call(null, modules.map(_.value): _*)
+    })
   }
 
   def define(dependencies: Array[String], factory: JSObject): Unit  = {

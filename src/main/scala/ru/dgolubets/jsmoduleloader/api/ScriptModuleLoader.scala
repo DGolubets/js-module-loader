@@ -12,4 +12,15 @@ trait ScriptModuleLoader {
    * @return
    */
   def engine: ScriptEngine
+
+  /**
+   * Executes a code block that uses the script engine, synchronized with the loader.
+   * Every action against the ScriptEngine or produced native script objects needs to be synchronized.
+   *
+   * @param code Synchronized code
+   * @tparam T Type of the code block expression
+   */
+  def lock[T](code: => T) = engine.synchronized {
+    code
+  }
 }

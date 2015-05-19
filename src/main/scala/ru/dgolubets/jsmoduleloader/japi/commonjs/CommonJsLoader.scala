@@ -1,5 +1,6 @@
 package ru.dgolubets.jsmoduleloader.japi.commonjs
 
+import java.util.concurrent.Callable
 import javax.script.ScriptEngine
 
 import jdk.nashorn.api.scripting.NashornScriptEngine
@@ -24,4 +25,6 @@ class CommonJsLoader private(loader: api.commonjs.CommonJsLoader)
   override def require(moduleId: String): ScriptModule = loader.require(moduleId).get
 
   override def getEngine(): ScriptEngine = loader.engine
+
+  override def lock(code: Runnable): Unit = loader.lock(code.run())
 }

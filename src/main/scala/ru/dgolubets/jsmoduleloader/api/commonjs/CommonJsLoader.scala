@@ -90,9 +90,10 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
    */
   private def bind(bindings: Bindings, context: CommonJsLoaderContext): Unit = {
     val initScript = Resource.readString("/commonjs/bind.js").get
-    val initFunction = engine.eval(initScript).asInstanceOf[JSObject]
-
-    initFunction.call(null, bindings, new CommonJsLoaderBridge(this, context))
+    this.lock {
+      val initFunction = engine.eval(initScript).asInstanceOf[JSObject]
+      initFunction.call(null, bindings, new CommonJsLoaderBridge(this, context))
+    }
   }
 
   /**
@@ -141,7 +142,8 @@ class CommonJsLoader(scriptEngine: NashornScriptEngine, moduleReader: ScriptModu
    * @param resolutionContext Resolution context
    * @return
    */
-  private def initializeModule(module: Module[CommonJsModuleDefinition], moduleDefinition: CommonJsModuleDefinition)( implicit resolutionContext: CommonJsResolutionContext): Unit = {
+  private def initializeModule(module: Module[CommonJsModuleDefinition], moduleDefinition: CommonJsModuleDefinition)
+                              ( implicit resolutionContext: CommonJsResolutionContext): Unit = this.lock {
     val exports = scriptEngine.eval("new Object()")
 
     // first initialization workflow step
