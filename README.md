@@ -3,7 +3,8 @@ AMD and CommonJs loaders for Scala.
 
 # Setup
 ```
-libraryDependencies += "ru.dgolubets" %% "js-module-loader" % "0.1.0"
+resolvers += Resolver.bintrayRepo("dgolubets", "releases")
+libraryDependencies += "ru.dgolubets" %% "js-module-loader" % "0.1.1"
 ```
 
 # AMD
