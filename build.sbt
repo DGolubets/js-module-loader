@@ -1,5 +1,3 @@
-import java.net.URL
-
 name := "js-module-loader"
 
 organization := "ru.dgolubets"
@@ -28,4 +26,4 @@ developers := List(Developer(
   "dgolubets",
   "Dmitry Golubets",
   "dgolubets@gmail.com",
-  new URL("https://github.com/DGolubets")))
+  url("https://github.com/DGolubets")))
